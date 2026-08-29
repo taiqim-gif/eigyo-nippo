@@ -270,10 +270,10 @@
 <div class="overlay" id="mileageStartOverlay">
   <div class="sheet">
     <h2 class="section-title" id="mileageStartTitle">本日の出発時走行距離</h2>
-    <p>本日最初の訪問を始める前に、車の走行距離(km)を入力してください。給油した場合は給油量も入力できます。</p>
+    <p>本日、出発時の走行距離(km)を入力。(給油した場合は給油量)</p>
     <label for="mileageStartInput">走行距離 (km)</label>
     <input type="number" id="mileageStartInput" inputmode="numeric" placeholder="例：58230">
-    <label for="mileageStartFuelInput">給油量 (L)　※給油していなければ空欄でOK</label>
+    <label for="mileageStartFuelInput">給油量 (L)　※給油なしは空欄</label>
     <input type="number" id="mileageStartFuelInput" inputmode="numeric" placeholder="例：40">
     <button class="btn btn-amber" onclick="submitMileageStart()">保存</button>
     <button class="btn btn-ghost" onclick="closeMileageStart()">キャンセル</button>
@@ -284,10 +284,10 @@
 <div class="overlay" id="mileageEndOverlay">
   <div class="sheet">
     <h2 class="section-title">帰社時走行距離</h2>
-    <p>本日の業務終了時の走行距離(km)を入力してください。給油した場合は給油量も入力できます。</p>
+    <p>本日、到着時の走行距離(km)を入力。(給油した場合は給油量)。</p>
     <label for="mileageEndInput">走行距離 (km)</label>
     <input type="number" id="mileageEndInput" inputmode="numeric" placeholder="例：58390">
-    <label for="mileageEndFuelInput">給油量 (L)　※給油していなければ空欄でOK</label>
+    <label for="mileageEndFuelInput">給油量 (L)　※給油なしは空欄</label>
     <input type="number" id="mileageEndFuelInput" inputmode="numeric" placeholder="例：35">
     <button class="btn btn-primary" onclick="submitMileageEnd()">保存</button>
     <button class="btn btn-ghost" onclick="closeMileageEnd()">キャンセル</button>
@@ -306,7 +306,7 @@
     <input type="text" id="editEndTime" placeholder="10:15">
     <label for="editDest">訪問先名称</label>
     <input type="text" id="editDest">
-    <label for="editContact">打合せ者名</label>
+    <label for="editContact">面会者名</label>
     <input type="text" id="editContact">
     <label for="editContent">内容</label>
     <textarea id="editContent"></textarea>
