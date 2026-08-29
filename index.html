@@ -644,16 +644,38 @@ function submitStart(){
   const dest = sanitize(document.getElementById('destInput').value);
   const contact = sanitize(document.getElementById('contactInput').value);
   const time = sanitize(document.getElementById('startTimeInput').value) || nowParts().time;
-  if(!dest){ alert('訪問先名称を入力してください。'); return; }
+
+  if(!dest){
+    alert('訪問先名称を入力してください。');
+    return;
+  }
+
   let date = nowParts().date;
   if(isEditingWorking){
     const w = loadWorking();
     if(w) date = w.date;
   }
-  saveWorking({date, time, dest, contact, lat: capturedLat, lng: capturedLng});
+
+  saveWorking({
+    date,
+    time,
+    dest,
+    contact,
+    lat: capturedLat,
+    lng: capturedLng
+  });
+
   isEditingWorking = false;
-  goHome();
+
+  // 「保存」後、自動的に「記録」画面へ進む
+  openEnd();
+
+  // 「打合せ内容」にカーソルを移動
+  setTimeout(() => {
+    document.getElementById('contentInput').focus();
+  }, 50);
 }
+```
 
 /* ---- end flow ---- */
 function openEnd(){
