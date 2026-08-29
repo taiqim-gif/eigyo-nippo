@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>営業日報</title>
+<style>
+  :root{
+    --ink:#1c2321;
+    --ink-soft:#4a5551;
+    --paper:#f1f0ec;
+    --paper-raised:#ffffff;
+    --line:rgba(28,35,33,0.14);
+    --amber:#e39a2d;
+    --amber-deep:#b8781c;
+    --steel:#2c4a5e;
+    --danger:#b33f30;
+    --ok:#3d6b4c;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",system-ui,sans-serif;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  header{
+    padding:18px 20px 14px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  header h1{
+    font-size:19px;
+    margin:0;
+    letter-spacing:0.02em;
+    font-weight:800;
+  }
+  #statusBadge{
+    font-size:12px;
+    font-weight:700;
+    padding:5px 10px;
+    border-radius:999px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    color:var(--ink-soft);
+  }
+  #statusBadge.active{
+    background:var(--amber);
+    color:#241a06;
+    border-color:var(--amber-deep);
+  }
+  main{
+    flex:1;
+    padding:18px 20px 100px;
+    overflow-y:auto;
+  }
+  .view{display:none;}
+  .view.show{display:block; animation:fadeUp .18s ease;}
+  @keyframes fadeUp{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  .ticket{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    margin-bottom:14px;
+    position:relative;
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+  .ticket::before{
+    content:"";
+    position:absolute;
+    left:0; right:0; top:0;
+    height:4px;
+    background:repeating-linear-gradient(90deg, var(--amber) 0 10px, transparent 10px 18px);
+    border-radius:var(--radius) var(--radius) 0 0;
+  }
+  .ticket .label{
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    margin-bottom:2px;
+  }
+  .ticket .value{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:15px;
+    margin-bottom:10px;
+  }
+  .ticket .value:last-child{margin-bottom:0;}
+  .ticket .row-actions{display:flex; gap:8px; margin-top:10px;}
+  .ticket .row-actions .btn{margin-top:0; flex:1;}
+  .empty-note{
+    color:var(--ink-soft);
+    font-size:14px;
+    line-height:1.7;
+    padding:24px 4px;
+    text-align:center;
+  }
+
+  h2.section-title{
+    font-size:15px;
+    font-weight:800;
+    margin:0 0 14px;
+    color:var(--steel);
+  }
+  label{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink-soft);
+    margin:16px 0 6px;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=number], textarea{
+    width:100%;
+    font-size:16px;
+    padding:12px 13px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    color:var(--ink);
+    font-family:inherit;
+  }
+  textarea{min-height:110px; resize:vertical; line-height:1.5;}
+  input:focus, textarea:focus{outline:2px solid var(--steel); outline-offset:1px;}
+
+  .btn{
+    display:block;
+    width:100%;
+    text-align:center;
+    padding:14px 16px;
+    border-radius:10px;
+    border:none;
+    font-size:15px;
+    font-weight:800;
+    margin-top:20px;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--steel); color:#fff;}
+  .btn-amber{background:var(--amber); color:#241a06;}
+  .btn-ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--line); margin-top:10px;}
+  .btn-danger{background:transparent; color:var(--danger); border:1px solid var(--danger); margin-top:10px;}
+  .btn-sm{font-size:13px; padding:10px 12px;}
+
+  nav#tabbar{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    display:flex;
+    gap:10px;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:var(--paper);
+    border-top:1px solid var(--line);
+  }
+  nav#tabbar button{
+    flex:1;
+    padding:13px 8px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    font-size:13px;
+    font-weight:800;
+    color:var(--ink);
+  }
+  nav#tabbar button.primary{background:var(--steel); color:#fff; border-color:var(--steel);}
+  nav#tabbar button.warn{background:var(--amber); color:#241a06; border-color:var(--amber-deep);}
+
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(28,35,33,0.5);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:50;
+    overflow-y:auto;
+  }
+  .overlay.show{display:flex;}
+  .sheet{
+    background:var(--paper-raised);
+    width:100%;
+    max-width:480px;
+    border-radius:16px 16px 0 0;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+  }
+  .sheet p{font-size:14px; line-height:1.7; color:var(--ink-soft); margin:4px 0 0;}
+  .sheet .value{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700; color:var(--ink);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>営業日報</h1>
+  <span id="statusBadge">待機中</span>
+</header>
+
+<main>
+
+  <!-- HOME -->
+  <section id="view-home" class="view show">
+    <div id="homeTicket"></div>
+  </section>
+
+  <!-- START FORM -->
+  <section id="view-start" class="view">
+    <h2 class="section-title" id="startTitle">訪問開始</h2>
+    <label for="destInput">訪問先名称</label>
+    <input type="text" id="destInput" placeholder="例：株式会社ABC" autocomplete="off">
+    <label for="contactInput">打合せ者名</label>
+    <input type="text" id="contactInput" placeholder="例：山田太郎" autocomplete="off">
+    <label for="startTimeInput">開始時間</label>
+    <input type="text" id="startTimeInput" placeholder="09:32">
+    <label>位置情報</label>
+    <div id="locStatus" style="font-size:13px; color:var(--ink-soft); margin-bottom:8px;">自動取得中...</div>
+    <button type="button" class="btn btn-ghost" id="locBtn" onclick="captureLocation()" style="margin-top:0;">現在地を再取得</button>
+    <button class="btn btn-primary" onclick="submitStart()">保存</button>
+    <button class="btn btn-ghost" onclick="cancelStart()">キャンセル</button>
+  </section>
+
+  <!-- END FORM -->
+  <section id="view-end" class="view">
+    <h2 class="section-title">訪問終了</h2>
+    <div id="endTicket"></div>
+    <label for="contentInput">打合せ内容</label>
+    <textarea id="contentInput" placeholder="例：使用状況を確認。来月の使用量を確認。"></textarea>
+    <button class="btn btn-amber" onclick="submitEnd()">終了を記録</button>
+    <button class="btn btn-ghost" onclick="goHome()">キャンセル</button>
+  </section>
+
+  <!-- LOG -->
+  <section id="view-log" class="view">
+    <h2 class="section-title">走行距離・給油</h2>
+    <div id="logMileageBlock"></div>
+    <h2 class="section-title" style="margin-top:22px;">訪問記録（タップで編集・削除）</h2>
+    <div id="visitList"></div>
+    <button class="btn btn-primary" onclick="sendMail()">メールで送信</button>
+    <button class="btn btn-ghost" onclick="copyLog()">コピー</button>
+    <button class="btn btn-danger" onclick="clearLogConfirm()">記録を消去（送信済みのとき）</button>
+  </section>
+
+</main>
+
+<nav id="tabbar">
+  <button onclick="goHome()">ホーム</button>
+  <button class="warn" onclick="openStart()">訪問開始</button>
+  <button class="primary" onclick="openEnd()">訪問終了</button>
+  <button onclick="openLog()">ログ</button>
+</nav>
+
+<!-- start-of-day mileage / fuel sheet -->
+<div class="overlay" id="mileageStartOverlay">
+  <div class="sheet">
+    <h2 class="section-title" id="mileageStartTitle">本日の出発時走行距離</h2>
+    <p>本日最初の訪問を始める前に、車の走行距離(km)を入力してください。給油した場合は給油量も入力できます。</p>
+    <label for="mileageStartInput">走行距離 (km)</label>
+    <input type="number" id="mileageStartInput" inputmode="numeric" placeholder="例：58230">
+    <label for="mileageStartFuelInput">給油量 (L)　※給油していなければ空欄でOK</label>
+    <input type="number" id="mileageStartFuelInput" inputmode="numeric" placeholder="例：40">
+    <button class="btn btn-amber" onclick="submitMileageStart()">保存</button>
+    <button class="btn btn-ghost" onclick="closeMileageStart()">キャンセル</button>
+  </div>
+</div>
+
+<!-- end-of-day mileage / fuel sheet -->
+<div class="overlay" id="mileageEndOverlay">
+  <div class="sheet">
+    <h2 class="section-title">帰社時走行距離</h2>
+    <p>本日の業務終了時の走行距離(km)を入力してください。給油した場合は給油量も入力できます。</p>
+    <label for="mileageEndInput">走行距離 (km)</label>
+    <input type="number" id="mileageEndInput" inputmode="numeric" placeholder="例：58390">
+    <label for="mileageEndFuelInput">給油量 (L)　※給油していなければ空欄でOK</label>
+    <input type="number" id="mileageEndFuelInput" inputmode="numeric" placeholder="例：35">
+    <button class="btn btn-primary" onclick="submitMileageEnd()">保存</button>
+    <button class="btn btn-ghost" onclick="closeMileageEnd()">キャンセル</button>
+  </div>
+</div>
+
+<!-- visit edit sheet -->
+<div class="overlay" id="visitEditOverlay">
+  <div class="sheet">
+    <h2 class="section-title">訪問記録を編集</h2>
+    <label for="editDate">日付</label>
+    <input type="text" id="editDate" placeholder="2026/08/29">
+    <label for="editStartTime">開始時間</label>
+    <input type="text" id="editStartTime" placeholder="09:32">
+    <label for="editEndTime">終了時間</label>
+    <input type="text" id="editEndTime" placeholder="10:15">
+    <label for="editDest">訪問先名称</label>
+    <input type="text" id="editDest">
+    <label for="editContact">打合せ者名</label>
+    <input type="text" id="editContact">
+    <label for="editContent">内容</label>
+    <textarea id="editContent"></textarea>
+    <label for="editLat">緯度（任意）</label>
+    <input type="text" id="editLat" placeholder="35.681236">
+    <label for="editLng">経度（任意）</label>
+    <input type="text" id="editLng" placeholder="139.767125">
+    <button class="btn btn-primary" onclick="saveVisitEdit()">保存</button>
+    <button class="btn btn-ghost" onclick="closeVisitEdit()">キャンセル</button>
+  </div>
+</div>
+
+<!-- unfinished-visit warning sheet -->
+<div class="overlay" id="warnOverlay">
+  <div class="sheet">
+    <h2 class="section-title">前回の訪問が終了していません</h2>
+    <p>訪問先：<span class="value" id="warnDest"></span></p>
+    <p>開始：<span class="value" id="warnTime"></span></p>
+    <p style="margin-top:12px;">新しい訪問を開始しますか？（未終了データは上書きされます）</p>
+    <button class="btn btn-amber" onclick="proceedNewVisit()">新しい訪問を開始</button>
+    <button class="btn btn-ghost" onclick="closeWarn()">キャンセル</button>
+  </div>
+</div>
+
+<script>
+const WORK_KEY = 'eigyo_working';
+const MILE_KEY = 'eigyo_mileage';
+const VISITS_KEY = 'eigyo_visits';
+const HEADER = '日付,開始時間,終了時間,訪問先名称,打合せ者名,内容,緯度,経度';
+
+let mileageStartFromFlow = false;
+let isEditingWorking = false;
+let editingIndex = null;
+let capturedLat = null;
+let capturedLng = null;
+
+function pad(n){return n.toString().padStart(2,'0');}
+function nowParts(){
+  const d = new Date();
+  return {
+    date: `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  };
+}
+function sanitize(s){
+  return (s||'').replace(/[,\r\n\t]/g,'_').trim();
+}
+function todayStr(){ return nowParts().date; }
+
+/* ---- location ---- */
+function resetLocationUI(){
+  capturedLat = null;
+  capturedLng = null;
+  document.getElementById('locStatus').textContent = '自動取得中...';
+  document.getElementById('locBtn').textContent = '現在地を再取得';
+}
+function setLocationUI(lat, lng){
+  capturedLat = lat;
+  capturedLng = lng;
+  document.getElementById('locStatus').textContent = (lat!=null && lng!=null) ? `取得済み：${lat}, ${lng}` : '未取得';
+  document.getElementById('locBtn').textContent = '現在地を再取得';
+}
+function captureLocation(){
+  if(!navigator.geolocation){
+    document.getElementById('locStatus').textContent = 'この端末・ブラウザでは取得できません';
+    return;
+  }
+  document.getElementById('locStatus').textContent = '自動取得中...';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      setLocationUI(pos.coords.latitude.toFixed(6), pos.coords.longitude.toFixed(6));
+    },
+    err => {
+      document.getElementById('locStatus').textContent = '取得できませんでした（位置情報の許可を確認してください）';
+      document.getElementById('locBtn').textContent = '現在地を再取得';
+    },
+    {enableHighAccuracy:true, timeout:10000}
+  );
+}
+
+/* ---- working (in-progress visit) ---- */
+function loadWorking(){
+  const raw = localStorage.getItem(WORK_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+function saveWorking(obj){ localStorage.setItem(WORK_KEY, JSON.stringify(obj)); }
+function clearWorking(){ localStorage.removeItem(WORK_KEY); }
+
+/* ---- mileage / fuel ---- */
+function loadMileage(){
+  const raw = localStorage.getItem(MILE_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+function saveMileage(obj){ localStorage.setItem(MILE_KEY, JSON.stringify(obj)); }
+
+/* ---- visits (completed records) ---- */
+function loadVisits(){
+  const raw = localStorage.getItem(VISITS_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+function saveVisits(arr){ localStorage.setItem(VISITS_KEY, JSON.stringify(arr)); }
+function addVisit(v){
+  const arr = loadVisits();
+  arr.push(v);
+  saveVisits(arr);
+}
+function visitsToCsv(arr){
+  if(arr.length === 0) return '';
+  const rows = arr.map(v => [v.date, v.startTime, v.endTime, v.dest, v.contact, v.content, v.lat||'', v.lng||''].join(','));
+  return HEADER + '\n' + rows.join('\n');
+}
+
+function setView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));
+  document.getElementById(id).classList.add('show');
+}
+
+function refreshBadge(){
+  const w = loadWorking();
+  const badge = document.getElementById('statusBadge');
+  if(w){ badge.textContent = '訪問中'; badge.classList.add('active'); }
+  else{ badge.textContent = '待機中'; badge.classList.remove('active'); }
+}
+
+/* ---- shared mileage card (used on home + log) ---- */
+function mileageCardHtml(){
+  const m = loadMileage();
+  if(!m){
+    return '<div class="empty-note">本日の走行距離・給油記録はまだありません。</div>';
+  }
+  let html = '<div class="ticket">';
+  html += `<div class="label">対象日</div><div class="value">${m.date}</div>`;
+  html += `<div class="label">出発時走行距離</div><div class="value">${m.start!=null ? m.start+' km' : '—'}</div>`;
+  if(m.startFuel!=null){
+    html += `<div class="label">出発時給油量</div><div class="value">${m.startFuel} L</div>`;
+  }
+  html += `<div class="label">帰社時走行距離</div><div class="value">${m.end!=null ? m.end+' km' : '—'}</div>`;
+  if(m.endFuel!=null){
+    html += `<div class="label">帰社時給油量</div><div class="value">${m.endFuel} L</div>`;
+  }
+  html += `<div class="row-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openMileageStart(false)">出発時を編集</button>
+      <button class="btn btn-ghost btn-sm" onclick="openMileageEnd()">帰社時を編集</button>
+    </div>`;
+  html += '</div>';
+  return html;
+}
+
+function renderHomeTicket(){
+  const w = loadWorking();
+  const el = document.getElementById('homeTicket');
+  let html = mileageCardHtml();
+  if(!w){
+    html += `<div class="empty-note">現在、進行中の訪問はありません。<br>「訪問開始」から記録してください。</div>`;
+  } else {
+    html += `
+      <div class="ticket">
+        <div class="label">訪問先</div>
+        <div class="value">${w.dest}</div>
+        <div class="label">打合せ者</div>
+        <div class="value">${w.contact}</div>
+        <div class="label">開始</div>
+        <div class="value">${w.date} ${w.time}</div>
+        <div class="row-actions">
+          <button class="btn btn-ghost btn-sm" onclick="editWorking()">編集</button>
+        </div>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function goHome(){
+  closeWarn();
+  isEditingWorking = false;
+  refreshBadge();
+  renderHomeTicket();
+  setView('view-home');
+}
+
+/* ---- mileage flow ---- */
+function openMileageStart(fromFlow){
+  mileageStartFromFlow = !!fromFlow;
+  const m = loadMileage();
+  const sameDay = m && m.date === todayStr();
+  document.getElementById('mileageStartTitle').textContent = fromFlow ? '本日の出発時走行距離' : '出発時データを編集';
+  document.getElementById('mileageStartInput').value = (sameDay && m.start!=null) ? m.start : '';
+  document.getElementById('mileageStartFuelInput').value = (sameDay && m.startFuel!=null) ? m.startFuel : '';
+  document.getElementById('mileageStartOverlay').classList.add('show');
+}
+function closeMileageStart(){
+  document.getElementById('mileageStartOverlay').classList.remove('show');
+}
+function submitMileageStart(){
+  const v = document.getElementById('mileageStartInput').value;
+  if(v === ''){ alert('走行距離を入力してください。'); return; }
+  const fuel = document.getElementById('mileageStartFuelInput').value;
+  let m = loadMileage();
+  if(!m || m.date !== todayStr()){ m = {date: todayStr(), start:null, startFuel:null, end:null, endFuel:null}; }
+  m.start = Number(v);
+  m.startFuel = fuel === '' ? null : Number(fuel);
+  saveMileage(m);
+  const shouldContinue = mileageStartFromFlow;
+  closeMileageStart();
+  refreshBadge();
+  renderHomeTicket();
+  if(shouldContinue){ openStart(); } else { goHome(); }
+}
+function openMileageEnd(){
+  const m = loadMileage();
+  const sameDay = m && m.date === todayStr();
+  document.getElementById('mileageEndInput').value = (sameDay && m.end!=null) ? m.end : '';
+  document.getElementById('mileageEndFuelInput').value = (sameDay && m.endFuel!=null) ? m.endFuel : '';
+  document.getElementById('mileageEndOverlay').classList.add('show');
+}
+function closeMileageEnd(){
+  document.getElementById('mileageEndOverlay').classList.remove('show');
+}
+function submitMileageEnd(){
+  const v = document.getElementById('mileageEndInput').value;
+  if(v === ''){ alert('走行距離を入力してください。'); return; }
+  const fuel = document.getElementById('mileageEndFuelInput').value;
+  let m = loadMileage();
+  if(!m || m.date !== todayStr()){ m = {date: todayStr(), start:null, startFuel:null, end:null, endFuel:null}; }
+  m.end = Number(v);
+  m.endFuel = fuel === '' ? null : Number(fuel);
+  saveMileage(m);
+  closeMileageEnd();
+  goHome();
+}
+
+/* ---- start flow (new visit) ---- */
+function openStart(){
+  const m = loadMileage();
+  if(!m || m.date !== todayStr()){
+    openMileageStart(true);
+    return;
+  }
+  const w = loadWorking();
+  if(w && !isEditingWorking){
+    document.getElementById('warnDest').textContent = w.dest;
+    document.getElementById('warnTime').textContent = `${w.date} ${w.time}`;
+    document.getElementById('warnOverlay').classList.add('show');
+    return;
+  }
+  document.getElementById('startTitle').textContent = '訪問開始';
+  document.getElementById('destInput').value = '';
+  document.getElementById('contactInput').value = '';
+  document.getElementById('startTimeInput').value = nowParts().time;
+  resetLocationUI();
+  setView('view-start');
+  captureLocation();
+}
+function closeWarn(){ document.getElementById('warnOverlay').classList.remove('show'); }
+function proceedNewVisit(){
+  closeWarn();
+  isEditingWorking = false;
+  document.getElementById('startTitle').textContent = '訪問開始';
+  document.getElementById('destInput').value = '';
+  document.getElementById('contactInput').value = '';
+  document.getElementById('startTimeInput').value = nowParts().time;
+  resetLocationUI();
+  setView('view-start');
+  captureLocation();
+}
+function editWorking(){
+  const w = loadWorking();
+  if(!w) return;
+  isEditingWorking = true;
+  document.getElementById('startTitle').textContent = '訪問中データを編集';
+  document.getElementById('destInput').value = w.dest;
+  document.getElementById('contactInput').value = w.contact;
+  document.getElementById('startTimeInput').value = w.time;
+  setLocationUI(w.lat!=null ? w.lat : null, w.lng!=null ? w.lng : null);
+  if(w.lat==null){ document.getElementById('locStatus').textContent = '未取得'; }
+  setView('view-start');
+}
+function cancelStart(){
+  isEditingWorking = false;
+  goHome();
+}
+function submitStart(){
+  const dest = sanitize(document.getElementById('destInput').value);
+  const contact = sanitize(document.getElementById('contactInput').value);
+  const time = sanitize(document.getElementById('startTimeInput').value) || nowParts().time;
+  if(!dest){ alert('訪問先名称を入力してください。'); return; }
+  let date = nowParts().date;
+  if(isEditingWorking){
+    const w = loadWorking();
+    if(w) date = w.date;
+  }
+  saveWorking({date, time, dest, contact, lat: capturedLat, lng: capturedLng});
+  isEditingWorking = false;
+  goHome();
+}
+
+/* ---- end flow ---- */
+function openEnd(){
+  const w = loadWorking();
+  if(!w){
+    alert('進行中の訪問がありません。');
+    return;
+  }
+  document.getElementById('endTicket').innerHTML = `
+    <div class="ticket">
+      <div class="label">訪問先</div>
+      <div class="value">${w.dest}</div>
+      <div class="label">打合せ者</div>
+      <div class="value">${w.contact}</div>
+      <div class="label">開始</div>
+      <div class="value">${w.date} ${w.time}</div>
+    </div>`;
+  document.getElementById('contentInput').value = '';
+  setView('view-end');
+}
+function submitEnd(){
+  const w = loadWorking();
+  if(!w){ goHome(); return; }
+  const content = sanitize(document.getElementById('contentInput').value);
+  const {time: endTime} = nowParts();
+  addVisit({date: w.date, startTime: w.time, endTime, dest: w.dest, contact: w.contact, content, lat: w.lat!=null ? w.lat : '', lng: w.lng!=null ? w.lng : ''});
+  clearWorking();
+  goHome();
+  if(confirm('記録しました。営業日報をメールで送信しますか？')){
+    sendMail();
+  }
+}
+
+/* ---- visit list (edit / delete completed records) ---- */
+function renderVisitList(){
+  const arr = loadVisits();
+  const el = document.getElementById('visitList');
+  if(arr.length === 0){
+    el.innerHTML = '<div class="empty-note">まだ記録がありません。</div>';
+    return;
+  }
+  el.innerHTML = arr.map((v,i) => `
+    <div class="ticket">
+      <div class="label">${v.date} ${v.startTime}〜${v.endTime}</div>
+      <div class="value">${v.dest} / ${v.contact}</div>
+      <div class="value" style="font-size:13px; color:var(--ink-soft); font-family:inherit; margin-bottom:0;">${v.content || '（内容なし）'}</div>
+      ${v.lat && v.lng ? `<div style="margin-top:8px;"><a href="https://maps.google.com/?q=${v.lat},${v.lng}" target="_blank" style="font-size:12px; color:var(--steel); font-weight:700;">地図で見る（${v.lat}, ${v.lng}）</a></div>` : ''}
+      <div class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editVisit(${i})">編集</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteVisit(${i})">削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+function editVisit(i){
+  editingIndex = i;
+  const v = loadVisits()[i];
+  document.getElementById('editDate').value = v.date;
+  document.getElementById('editStartTime').value = v.startTime;
+  document.getElementById('editEndTime').value = v.endTime;
+  document.getElementById('editDest').value = v.dest;
+  document.getElementById('editContact').value = v.contact;
+  document.getElementById('editContent').value = v.content;
+  document.getElementById('editLat').value = v.lat || '';
+  document.getElementById('editLng').value = v.lng || '';
+  document.getElementById('visitEditOverlay').classList.add('show');
+}
+function closeVisitEdit(){
+  document.getElementById('visitEditOverlay').classList.remove('show');
+  editingIndex = null;
+}
+function saveVisitEdit(){
+  if(editingIndex === null) return;
+  const arr = loadVisits();
+  arr[editingIndex] = {
+    date: sanitize(document.getElementById('editDate').value),
+    startTime: sanitize(document.getElementById('editStartTime').value),
+    endTime: sanitize(document.getElementById('editEndTime').value),
+    dest: sanitize(document.getElementById('editDest').value),
+    contact: sanitize(document.getElementById('editContact').value),
+    content: sanitize(document.getElementById('editContent').value),
+    lat: document.getElementById('editLat').value.trim(),
+    lng: document.getElementById('editLng').value.trim()
+  };
+  saveVisits(arr);
+  closeVisitEdit();
+  renderVisitList();
+}
+function deleteVisit(i){
+  if(!confirm('この訪問記録を削除しますか？')) return;
+  const arr = loadVisits();
+  arr.splice(i,1);
+  saveVisits(arr);
+  renderVisitList();
+}
+
+/* ---- log / mail / export ---- */
+function mileageTextBlock(){
+  const m = loadMileage();
+  if(!m) return '';
+  const startKm = m.start!=null ? m.start+'km' : '未入力';
+  const endKm = m.end!=null ? m.end+'km' : '未入力';
+  const startFuel = m.startFuel!=null ? m.startFuel+'L' : '未入力';
+  const endFuel = m.endFuel!=null ? m.endFuel+'L' : '未入力';
+  return `走行距離・給油記録,${m.date}\n出発時走行距離,${startKm}\n出発時給油量,${startFuel}\n帰社時走行距離,${endKm}\n帰社時給油量,${endFuel}\n\n`;
+}
+function fullReportText(){
+  return mileageTextBlock() + visitsToCsv(loadVisits());
+}
+function openLog(){
+  document.getElementById('logMileageBlock').innerHTML = mileageCardHtml();
+  renderVisitList();
+  setView('view-log');
+}
+function sendMail(){
+  const text = fullReportText().trim();
+  if(!text){ alert('送信するデータがありません。'); return; }
+  const subject = encodeURIComponent('営業日報 ' + nowParts().date);
+  const body = encodeURIComponent(text);
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+function copyLog(){
+  const text = fullReportText().trim();
+  if(!text){ alert('コピーするデータがありません。'); return; }
+  navigator.clipboard.writeText(text).then(()=>alert('コピーしました。'));
+}
+function clearLogConfirm(){
+  if(loadVisits().length === 0 && !loadMileage()){ alert('消去するデータがありません。'); return; }
+  if(confirm('日報の記録と走行距離・給油記録を消去します。PC側で受信・取り込みが完了してから実行してください。よろしいですか？')){
+    localStorage.removeItem(VISITS_KEY);
+    localStorage.removeItem(MILE_KEY);
+    openLog();
+  }
+}
+
+/* init */
+refreshBadge();
+renderHomeTicket();
+</script>
+</body>
+</html>
