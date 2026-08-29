@@ -235,7 +235,6 @@
     <label>位置情報</label>
     <div id="locStatus" style="font-size:13px; color:var(--ink-soft); margin-bottom:8px;">自動取得中...</div>
     <button type="button" class="btn btn-ghost" id="locBtn" onclick="captureLocation()" style="margin-top:0;">現在地を再取得</button>
-    <button class="btn btn-primary" onclick="submitStart()">保存</button>
     <button class="btn btn-ghost" onclick="cancelStart()">キャンセル</button>
   </section>
 
@@ -245,7 +244,6 @@
     <div id="endTicket"></div>
     <label for="contentInput">打合せ内容</label>
     <textarea id="contentInput" placeholder="例：使用状況を確認。来月の使用量を確認。"></textarea>
-    <button class="btn btn-amber" onclick="submitEnd()">終了を記録</button>
     <button class="btn btn-ghost" onclick="goHome()">キャンセル</button>
   </section>
 
@@ -264,8 +262,7 @@
 
 <nav id="tabbar">
   <button onclick="goHome()">ホーム</button>
-  <button class="warn" onclick="openStart()">訪問開始</button>
-  <button class="primary" onclick="openEnd()">訪問終了</button>
+  <button class="warn" id="primaryActionBtn" onclick="handlePrimaryAction()">開始</button>
   <button onclick="openLog()">ログ</button>
 </nav>
 
@@ -425,6 +422,52 @@ function visitsToCsv(arr){
 function setView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));
   document.getElementById(id).classList.add('show');
+  updateActionButton(id);
+}
+
+function updateActionButton(viewId){
+  const btn = document.getElementById('primaryActionBtn');
+
+  let label, buttonType;
+
+  if(viewId === 'view-start'){
+    // 訪問開始画面：保存 → オレンジ
+    label = '保存';
+    buttonType = 'orange';
+
+  } else if(viewId === 'view-end'){
+    // 訪問終了画面：完了 → 今まで通り青
+    label = '完了';
+    buttonType = 'blue';
+
+  } else if(loadWorking()){
+    // 訪問中：記録 → オレンジ
+    label = '記録';
+    buttonType = 'orange';
+
+  } else {
+    // 待機中：開始 → オレンジ
+    label = '開始';
+    buttonType = 'orange';
+  }
+
+  btn.textContent = label;
+
+  btn.classList.remove('primary', 'warn');
+
+  if(buttonType === 'blue'){
+    btn.classList.add('primary');
+  } else {
+    btn.classList.add('warn');
+  }
+}
+
+function handlePrimaryAction(){
+  const activeView = document.querySelector('.view.show');
+  const activeId = activeView ? activeView.id : 'view-home';
+  if(activeId === 'view-start'){ submitStart(); return; }
+  if(activeId === 'view-end'){ submitEnd(); return; }
+  if(loadWorking()){ openEnd(); } else { openStart(); }
 }
 
 function refreshBadge(){
@@ -746,6 +789,7 @@ function clearLogConfirm(){
 /* init */
 refreshBadge();
 renderHomeTicket();
+updateActionButton('view-home');
 </script>
 </body>
 </html>
