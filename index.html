@@ -24,6 +24,7 @@
   --end:#f9eadc;
   --record:#eee5f6;
   --mail:#f8e6ed;
+  --delete:#f7e4e4;
 
   --radius:14px;
 }
@@ -82,9 +83,9 @@ textarea{
   padding:10px 12px 30px;
 }
 
-/* ------------------------------
+/* ==============================
    ヘッダー
------------------------------- */
+============================== */
 
 .header{
   display:flex;
@@ -120,9 +121,9 @@ textarea{
   background:var(--vehicle);
 }
 
-/* ------------------------------
+/* ==============================
    画面
------------------------------- */
+============================== */
 
 .screen{
   display:none;
@@ -188,17 +189,19 @@ textarea{
   background:var(--end);
 }
 
-.record-button{
-  background:var(--record);
-}
-
 .mail-button{
   background:var(--mail);
+  margin-bottom:10px;
 }
 
-/* ------------------------------
+.delete-button{
+  width:100%;
+  background:var(--delete);
+}
+
+/* ==============================
    訪問先入力
------------------------------- */
+============================== */
 
 .visit-target{
   font-size:18px;
@@ -210,9 +213,9 @@ textarea{
   line-height:1.5;
 }
 
-/* ------------------------------
+/* ==============================
    面談入力
------------------------------- */
+============================== */
 
 .person-row{
   display:flex;
@@ -232,9 +235,9 @@ textarea{
   margin-bottom:8px;
 }
 
-/* ------------------------------
+/* ==============================
    完了確認カード
------------------------------- */
+============================== */
 
 .time-summary{
   display:flex;
@@ -255,9 +258,9 @@ textarea{
   font-weight:700;
 }
 
-/* ------------------------------
+/* ==============================
    車両情報
------------------------------- */
+============================== */
 
 .vehicle-status{
   background:var(--vehicle);
@@ -301,9 +304,9 @@ textarea{
   background:var(--end);
 }
 
-/* ------------------------------
+/* ==============================
    小さい画面
------------------------------- */
+============================== */
 
 @media(max-width:480px){
 
@@ -377,6 +380,7 @@ textarea{
   </div>
 
   <div class="field">
+
     <label class="label">
       訪問先
     </label>
@@ -386,6 +390,7 @@ textarea{
       class="visit-target"
       type="text"
       placeholder="訪問先を入力">
+
   </div>
 
   <button
@@ -396,10 +401,19 @@ textarea{
 
 </div>
 
+
+<!-- メール送信・全データ削除 -->
+
 <button
   id="mailButton"
   class="primary mail-button">
   メール送信
+</button>
+
+<button
+  id="deleteAllButton"
+  class="delete-button">
+  全データ削除
 </button>
 ```
 
@@ -430,6 +444,7 @@ textarea{
       type="text">
 
   </div>
+
 
   <div class="field">
 
@@ -526,8 +541,6 @@ textarea{
 
   </div>
 
-
-  <!-- 開始－終了時間をまとめて表示 -->
 
   <div class="time-summary">
 
@@ -626,14 +639,11 @@ textarea{
   </div>
 
 
-  <!--
-    ここでは位置情報を表示しない。
-    データとしては保存される。
-  -->
+  <!-- 記録するボタンは使用しない -->
 
   <button
     id="recordButton"
-    class="primary record-button"
+    class="primary"
     style="display:none;">
     記録する
   </button>
@@ -812,24 +822,24 @@ let dailyVehicleInfo =
 ========================================================= */
 
 let currentVisit = {
-  number: 1,
-  target: "",
+  number:1,
+  target:"",
 
-  startTime: "",
-  startLocation: "",
-  startLat: "",
-  startLng: "",
+  startTime:"",
+  startLocation:"",
+  startLat:"",
+  startLng:"",
 
-  endTime: "",
-  endLocation: "",
-  endLat: "",
-  endLng: "",
+  endTime:"",
+  endLocation:"",
+  endLat:"",
+  endLng:"",
 
-  person: "",
-  personTitle: "",
+  person:"",
+  personTitle:"",
 
-  contentType: "",
-  content: ""
+  contentType:"",
+  content:""
 };
 
 
@@ -870,6 +880,7 @@ function saveLogs(){
     LOG_KEY,
     JSON.stringify(meetingLogs)
   );
+
 }
 
 
@@ -879,6 +890,7 @@ function saveVehicle(){
     VEHICLE_KEY,
     JSON.stringify(dailyVehicleInfo)
   );
+
 }
 
 
@@ -899,6 +911,7 @@ function updateDate(){
 
   document.getElementById("dateDisplay").textContent =
     `${y}/${m}/${day}（${week}）`;
+
 }
 
 
@@ -914,14 +927,17 @@ function getNextVisitNumber(){
     meetingLogs.filter(x => x.date === today);
 
   return todayLogs.length + 1;
+
 }
 
 
 function updateVisitNumber(){
 
-  const number = getNextVisitNumber();
+  const number =
+    getNextVisitNumber();
 
-  currentVisit.number = number;
+  currentVisit.number =
+    number;
 
   document.getElementById("visitNumber").textContent =
     `訪問先 ${number}`;
@@ -931,6 +947,7 @@ function updateVisitNumber(){
 
   document.getElementById("finishVisitNumber").textContent =
     `訪問先 ${number}`;
+
 }
 
 
@@ -942,11 +959,15 @@ function showScreen(name){
 
   document.querySelectorAll(".screen")
     .forEach(screen => {
+
       screen.classList.remove("active");
+
     });
+
 
   document.getElementById(name + "Screen")
     .classList.add("active");
+
 
   window.scrollTo({
     top:0,
@@ -958,8 +979,8 @@ function showScreen(name){
 
 /* =========================================================
    位置情報
-   位置情報は画面には表示せず、
-   データとしてのみ保存する。
+   データとして保存する。
+   画面には表示しない。
 ========================================================= */
 
 function getLocation(){
@@ -977,6 +998,7 @@ function getLocation(){
       return;
     }
 
+
     navigator.geolocation.getCurrentPosition(
 
       position => {
@@ -987,10 +1009,10 @@ function getLocation(){
         const lng =
           position.coords.longitude;
 
+
         resolve({
 
-          location:
-            `${lat},${lng}`,
+          location:`${lat},${lng}`,
 
           lat:lat,
 
@@ -1034,11 +1056,14 @@ document.getElementById("startButton")
     document.getElementById("visitTarget")
     .value.trim();
 
+
   if(!target){
 
-    document.getElementById("visitTarget").focus();
+    document.getElementById("visitTarget")
+      .focus();
 
     return;
+
   }
 
 
@@ -1055,6 +1080,7 @@ document.getElementById("startButton")
   const location =
     await getLocation();
 
+
   currentVisit.startLocation =
     location.location;
 
@@ -1064,8 +1090,6 @@ document.getElementById("startButton")
   currentVisit.startLng =
     location.lng;
 
-
-  /* 面談画面へ切替 */
 
   document.getElementById("meetingVisitTarget")
     .value = target;
@@ -1090,9 +1114,6 @@ document.getElementById("startButton")
 
 /* =========================================================
    訪問終了
-   「終了」を押した時点で
-   終了時刻・終了位置を取得。
-   その後、確認カードを表示する。
 ========================================================= */
 
 document.getElementById("endButton")
@@ -1125,6 +1146,7 @@ document.getElementById("endButton")
   const location =
     await getLocation();
 
+
   currentVisit.endLocation =
     location.location;
 
@@ -1134,8 +1156,6 @@ document.getElementById("endButton")
   currentVisit.endLng =
     location.lng;
 
-
-  /* 終了後の編集画面 */
 
   document.getElementById("finishVisitTarget")
     .value = currentVisit.target;
@@ -1161,13 +1181,12 @@ document.getElementById("endButton")
 
   updateFinishTimeSummary();
 
+
   showScreen("finish");
 
 
   /*
-    「終了」を押した時点で
-    自動的に記録する。
-    そのため「記録する」ボタンは不要。
+    終了後、自動的に記録する。
   */
 
   recordVisit();
@@ -1187,6 +1206,7 @@ function updateFinishTimeSummary(){
   const end =
     document.getElementById("finishEndTime").value;
 
+
   const format = value => {
 
     if(!value) return "";
@@ -1197,6 +1217,7 @@ function updateFinishTimeSummary(){
 
   };
 
+
   document.getElementById("finishTimeSummary")
     .textContent =
       `${format(start)} ～ ${format(end)}`;
@@ -1205,13 +1226,10 @@ function updateFinishTimeSummary(){
 
 
 /* =========================================================
-   記録
-   実際には「終了」処理から自動実行する。
+   訪問記録
 ========================================================= */
 
 function recordVisit(){
-
-  /* 編集可能項目を取得 */
 
   currentVisit.target =
     document.getElementById("finishVisitTarget")
@@ -1278,7 +1296,7 @@ function recordVisit(){
   saveLogs();
 
 
-  /* 現在の訪問を初期化 */
+  /* 新しい訪問入力へ */
 
   currentVisit = {
 
@@ -1305,13 +1323,9 @@ function recordVisit(){
   };
 
 
-  /*
-    記録後は訪問カードを表示しない。
-    新しい訪問入力画面だけを表示。
-  */
-
   document.getElementById("visitTarget")
     .value = "";
+
 
   updateVisitNumber();
 
@@ -1326,7 +1340,9 @@ function recordVisit(){
 
 function getTodayVehicle(){
 
-  const today = getToday();
+  const today =
+    getToday();
+
 
   if(!dailyVehicleInfo[today]){
 
@@ -1351,13 +1367,14 @@ function getTodayVehicle(){
 
   }
 
+
   return dailyVehicleInfo[today];
 
 }
 
 
 /* =========================================================
-   車両情報画面を表示
+   車両情報画面
    初回表示時に現在時間・位置情報を自動記入
 ========================================================= */
 
@@ -1367,21 +1384,19 @@ async function openVehicleScreen(){
     getTodayVehicle();
 
 
-  /*
-    まだ発車時情報がない場合、
-    現在時間・位置情報を自動取得。
-  */
-
   if(!vehicle.departure.time){
 
     vehicle.departure.time =
       getNowDateTimeLocal();
 
+
     const location =
       await getLocation();
 
+
     vehicle.departure.location =
       location.location;
+
 
     saveVehicle();
 
@@ -1396,7 +1411,7 @@ async function openVehicleScreen(){
 
 
 /* =========================================================
-   車両情報入力値表示
+   車両入力値表示
 ========================================================= */
 
 function loadVehicleInputs(){
@@ -1441,7 +1456,7 @@ function loadVehicleInputs(){
 
 
 /* =========================================================
-   車両情報状態
+   車両状態
 ========================================================= */
 
 function updateVehicleStatus(){
@@ -1449,8 +1464,10 @@ function updateVehicleStatus(){
   const vehicle =
     getTodayVehicle();
 
+
   const status =
     vehicle.status;
+
 
   const text =
     status === "returned"
@@ -1458,6 +1475,7 @@ function updateVehicleStatus(){
       : status === "departed"
         ? "発車済み"
         : "発車前";
+
 
   document.getElementById("vehicleStatus")
     .textContent = text;
@@ -1476,11 +1494,6 @@ document.getElementById("departureButton")
     getTodayVehicle();
 
 
-  /*
-    入力欄の値を保存。
-    時間・位置情報は編集可能。
-  */
-
   vehicle.departure.distance =
     document.getElementById("departureDistance")
     .value;
@@ -1494,16 +1507,13 @@ document.getElementById("departureButton")
     .value;
 
 
-  /*
-    空欄の場合だけ現在時刻・位置を自動取得
-  */
-
   if(!vehicle.departure.time){
 
     vehicle.departure.time =
       getNowDateTimeLocal();
 
   }
+
 
   if(!vehicle.departure.location){
 
@@ -1555,16 +1565,13 @@ document.getElementById("returnButton")
     .value;
 
 
-  /*
-    空欄なら現在時間・位置を自動取得
-  */
-
   if(!vehicle.return.time){
 
     vehicle.return.time =
       getNowDateTimeLocal();
 
   }
+
 
   if(!vehicle.return.location){
 
@@ -1589,8 +1596,7 @@ document.getElementById("returnButton")
 
 
 /* =========================================================
-   車両情報入力欄
-   タップして編集した内容を自動保存
+   車両入力欄の変更を自動保存
 ========================================================= */
 
 [
@@ -1610,26 +1616,36 @@ document.getElementById("returnButton")
       const vehicle =
         getTodayVehicle();
 
+
       vehicle.departure.distance =
-        document.getElementById("departureDistance").value;
+        document.getElementById("departureDistance")
+        .value;
 
       vehicle.departure.time =
-        document.getElementById("departureTime").value;
+        document.getElementById("departureTime")
+        .value;
 
       vehicle.departure.location =
-        document.getElementById("departureLocation").value;
+        document.getElementById("departureLocation")
+        .value;
+
 
       vehicle.return.distance =
-        document.getElementById("returnDistance").value;
+        document.getElementById("returnDistance")
+        .value;
 
       vehicle.return.time =
-        document.getElementById("returnTime").value;
+        document.getElementById("returnTime")
+        .value;
 
       vehicle.return.location =
-        document.getElementById("returnLocation").value;
+        document.getElementById("returnLocation")
+        .value;
 
       vehicle.return.fuel =
-        document.getElementById("returnFuel").value;
+        document.getElementById("returnFuel")
+        .value;
+
 
       saveVehicle();
 
@@ -1639,7 +1655,7 @@ document.getElementById("returnButton")
 
 
 /* =========================================================
-   ヘッダーの動的ボタン
+   ヘッダー動的ボタン
 ========================================================= */
 
 document.getElementById("vehicleToggleButton")
@@ -1647,6 +1663,7 @@ document.getElementById("vehicleToggleButton")
 
   const vehicleScreen =
     document.getElementById("vehicleScreen");
+
 
   const isVehicle =
     vehicleScreen.classList.contains("active");
@@ -1662,6 +1679,7 @@ document.getElementById("vehicleToggleButton")
     document.getElementById("vehicleToggleButton")
       .textContent = "車両情報";
 
+
     showScreen("report");
 
   }else{
@@ -1673,6 +1691,7 @@ document.getElementById("vehicleToggleButton")
 
     document.getElementById("vehicleToggleButton")
       .textContent = "営業日報";
+
 
     await openVehicleScreen();
 
@@ -1703,6 +1722,7 @@ document.getElementById("mailButton")
 
 
   let body = "";
+
 
   body += `営業日報\n`;
   body += `日付：${today}\n\n`;
@@ -1768,13 +1788,94 @@ document.getElementById("mailButton")
     `&body=${encodeURIComponent(body)}`;
 
 
-  /*
-    メールアプリの作成画面を開く。
-    送信前に内容を確認できる。
-  */
-
   window.location.href =
     mailto;
+
+});
+
+
+/* =========================================================
+   全データ削除
+========================================================= */
+
+document.getElementById("deleteAllButton")
+.addEventListener("click", () => {
+
+  const confirmed =
+    window.confirm(
+      "保存されている営業日報と車両情報をすべて削除します。\n\nこの操作は元に戻せません。\n\n削除しますか？"
+    );
+
+
+  if(!confirmed){
+
+    return;
+
+  }
+
+
+  /*
+    保存データを完全削除
+  */
+
+  localStorage.removeItem(LOG_KEY);
+
+  localStorage.removeItem(VEHICLE_KEY);
+
+
+  /*
+    メモリ上のデータも初期化
+  */
+
+  meetingLogs = [];
+
+  dailyVehicleInfo = {};
+
+
+  currentVisit = {
+
+    number:1,
+
+    target:"",
+
+    startTime:"",
+    startLocation:"",
+    startLat:"",
+    startLng:"",
+
+    endTime:"",
+    endLocation:"",
+    endLat:"",
+    endLng:"",
+
+    person:"",
+    personTitle:"",
+
+    contentType:"",
+    content:""
+
+  };
+
+
+  /*
+    画面を初期状態に戻す
+  */
+
+  document.getElementById("visitTarget")
+    .value = "";
+
+
+  updateVisitNumber();
+
+
+  document.getElementById("vehicleToggleButton")
+    .textContent = "車両情報";
+
+
+  showScreen("report");
+
+
+  alert("全データを削除しました。");
 
 });
 
