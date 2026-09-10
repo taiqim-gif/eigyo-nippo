@@ -68,6 +68,13 @@
     .form-group {
       margin-bottom: 14px;
     }
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+    .form-row .form-group {
+      flex: 1;
+    }
     label {
       display: block;
       font-size: 0.85rem;
@@ -75,7 +82,7 @@
       margin-bottom: 6px;
       color: #636366;
     }
-    input[type="text"], textarea, select {
+    input[type="text"], input[type="number"], textarea, select {
       width: 100%;
       padding: 10px;
       border: 1px solid #c7c7cc;
@@ -203,6 +210,18 @@
         </div>
       </div>
 
+      <!-- 走行距離・ガソリン（横並び入力） -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="mileage">走行距離 (km)</label>
+          <input type="number" id="mileage" step="0.1" placeholder="例: 15.5">
+        </div>
+        <div class="form-group">
+          <label for="gasoline">ガソリン (L/円)</label>
+          <input type="text" id="gasoline" placeholder="例: 20L / 3000円">
+        </div>
+      </div>
+
       <!-- 打合せ内容 -->
       <div class="form-group">
         <label for="meetingContent">打合せ内容</label>
@@ -304,6 +323,9 @@
       // 打合せ者が未入力の場合は空文字にする
       const attendeeStr = nameVal ? `${nameVal} ${titleVal}` : '';
 
+      const mileageVal = document.getElementById('mileage').value.trim();
+      const gasolineVal = document.getElementById('gasoline').value.trim();
+
       const record = {
         id: Date.now(),
         startTime: currentData.startTime,
@@ -312,6 +334,8 @@
         mapUrl: mapUrl,
         visitTarget: document.getElementById('visitTarget').value,
         attendee: attendeeStr,
+        mileage: mileageVal ? `${mileageVal} km` : '',
+        gasoline: gasolineVal,
         content: document.getElementById('meetingContent').value
       };
 
@@ -349,6 +373,8 @@
             <strong>開始:</strong> ${log.startTime}<br>
             <strong>終了:</strong> ${log.endTime}（滞在: ${log.duration}）<br>
             <strong>同席:</strong> ${log.attendee}<br>
+            <strong>走行距離:</strong> ${log.mileage}<br>
+            <strong>ガソリン:</strong> ${log.gasoline}<br>
             <strong>内容:</strong> ${log.content}<br>
             <strong>位置:</strong> <a href="${log.mapUrl}" target="_blank">Google Map</a>
           </div>
@@ -373,6 +399,8 @@
         `■ 終了日時: ${log.endTime}\n` +
         `■ 滞在時間: ${log.duration}\n` +
         `■ 打合せ者: ${log.attendee}\n` +
+        `■ 走行距離: ${log.mileage}\n` +
+        `■ ガソリン: ${log.gasoline}\n` +
         `■ 内容:\n${log.content}\n\n` +
         `■ 位置情報:\n${log.mapUrl}`
       );
@@ -397,6 +425,8 @@
         bodyText += `終了日時: ${log.endTime}\n`;
         bodyText += `滞在時間: ${log.duration}\n`;
         bodyText += `打合せ者: ${log.attendee}\n`;
+        bodyText += `走行距離: ${log.mileage}\n`;
+        bodyText += `ガソリン: ${log.gasoline}\n`;
         bodyText += `内容:\n${log.content}\n`;
         bodyText += `位置情報: ${log.mapUrl}\n`;
         bodyText += `--------------------\n\n`;
