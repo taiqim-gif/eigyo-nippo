@@ -189,7 +189,7 @@
       <div class="form-group">
         <label for="attendeeName">打合せ者</label>
         <div class="attendee-group">
-          <input type="text" id="attendeeName" placeholder="氏名を入力" required>
+          <input type="text" id="attendeeName" placeholder="氏名を入力">
           <select id="title">
             <option value="様">様</option>
             <option value="社長">社長</option>
@@ -207,7 +207,7 @@
       <!-- 打合せ内容 -->
       <div class="form-group">
         <label for="meetingContent">打合せ内容</label>
-        <textarea id="meetingContent" placeholder="内容を入力してください" required></textarea>
+        <textarea id="meetingContent" placeholder="内容を入力してください"></textarea>
       </div>
 
       <button type="submit" class="btn-submit">保存する</button>
@@ -299,6 +299,12 @@
         ? `https://maps.google.com/?q=${currentData.latitude},${currentData.longitude}` 
         : '位置情報なし';
 
+      const nameVal = document.getElementById('attendeeName').value.trim();
+      const titleVal = document.getElementById('title').value;
+      
+      // 打合せ者が未入力の場合は空文字にする
+      const attendeeStr = nameVal ? `${nameVal} ${titleVal}` : '';
+
       const record = {
         id: Date.now(),
         startTime: currentData.startTime,
@@ -306,7 +312,7 @@
         duration: currentData.duration || '-',
         mapUrl: mapUrl,
         visitTarget: document.getElementById('visitTarget').value,
-        attendee: document.getElementById('attendeeName').value + ' ' + document.getElementById('title').value,
+        attendee: attendeeStr,
         content: document.getElementById('meetingContent').value
       };
 
