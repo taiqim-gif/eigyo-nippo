@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -27,8 +28,13 @@
       margin-bottom: 12px;
       color: #007aff;
     }
+    .time-btn-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
     .btn-start {
-      width: 100%;
+      flex: 1;
       padding: 14px;
       background-color: #34c759;
       color: white;
@@ -38,15 +44,26 @@
       font-weight: bold;
       cursor: pointer;
     }
-    .btn-start:active {
-      background-color: #28a745;
+    .btn-start:active { background-color: #28a745; }
+    
+    .btn-end {
+      flex: 1;
+      padding: 14px;
+      background-color: #ff9500;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
     }
+    .btn-end:active { background-color: #e08200; }
+
     .info-box {
       background: #f8f9fa;
       border: 1px solid #e5e5ea;
       padding: 10px;
       border-radius: 8px;
-      margin-top: 10px;
       font-size: 0.9rem;
     }
     .form-group {
@@ -76,12 +93,9 @@
       display: flex;
       gap: 8px;
     }
-    .attendee-group input[type="text"] {
-      flex: 2;
-    }
-    .attendee-group select {
-      flex: 1;
-    }
+    .attendee-group input[type="text"] { flex: 2; }
+    .attendee-group select { flex: 1; }
+
     .btn-submit {
       width: 100%;
       padding: 14px;
@@ -93,18 +107,70 @@
       font-weight: bold;
       cursor: pointer;
     }
+    .btn-secondary {
+      width: 100%;
+      padding: 12px;
+      background-color: #5856d6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    .btn-danger {
+      width: 100%;
+      padding: 10px;
+      background-color: #ff3b30;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .log-item {
+      border-bottom: 1px solid #e5e5ea;
+      padding: 12px 0;
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-header {
+      font-weight: bold;
+      color: #007aff;
+      margin-bottom: 4px;
+    }
+    .log-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-mail-sm { background-color: #34c759; color: white; }
+    .btn-del-sm { background-color: #ff3b30; color: white; }
   </style>
 </head>
 <body>
 
-  <!-- ステップ1: 開始記録 -->
+  <!-- ステップ1: 開始・終了時間記録 -->
   <div class="card">
-    <h2>1. 記録開始</h2>
-    <button class="btn-start" onclick="startRecord()">開始（位置情報・時間取得）</button>
+    <h2>1. 時間・位置情報記録</h2>
+    <div class="time-btn-group">
+      <button class="btn-start" onclick="startRecord()">開始</button>
+      <button class="btn-end" onclick="endRecord()">終了</button>
+    </div>
     
     <div id="status" class="info-box" style="display:none;">
       <div><strong>開始時間:</strong> <span id="startTime">-</span></div>
-      <div><strong>位置情報:</strong> <span id="locationInfo">取得中...</span></div>
+      <div><strong>終了時間:</strong> <span id="endTime">未記録</span></div>
+      <div><strong>滞在時間:</strong> <span id="duration">-</span></div>
+      <div><strong>位置情報:</strong> <span id="locationInfo">未取得</span></div>
     </div>
   </div>
 
@@ -148,16 +214,36 @@
     </form>
   </div>
 
+  <!-- ステップ3: 保存ログ・メール送信 -->
+  <div class="card">
+    <h2>3. 記録一覧・送信</h2>
+    <button class="btn-secondary" onclick="sendAllMail()">全件まとめてメール送信</button>
+    <button class="btn-danger" onclick="clearAllLogs()" style="margin-bottom: 16px;">全ログを消去</button>
+    
+    <div id="logContainer">
+      <!-- ここに保存済みのログが表示されます -->
+    </div>
+  </div>
+
   <script>
     let currentData = {
       startTime: '',
+      startDateObj: null,
+      endTime: '',
+      duration: '',
       latitude: null,
       longitude: null
     };
 
-    // 開始ボタンを押した時の処理（時間と位置情報の取得のみ）
+    // 画面読み込み時にログを表示
+    window.onload = function() {
+      renderLogs();
+    };
+
+    // 開始ボタンを押した時の処理
     function startRecord() {
       const now = new Date();
+      currentData.startDateObj = now;
       currentData.startTime = now.toLocaleString('ja-JP');
       
       document.getElementById('status').style.display = 'block';
@@ -182,6 +268,24 @@
       }
     }
 
+    // 終了ボタンを押した時の処理
+    function endRecord() {
+      if (!currentData.startDateObj) {
+        alert('先に「開始」ボタンを押してください。');
+        return;
+      }
+      const endDate = new Date();
+      currentData.endTime = endDate.toLocaleString('ja-JP');
+      
+      // 滞在時間の計算（分単位）
+      const diffMs = endDate - currentData.startDateObj;
+      const diffMins = Math.round(diffMs / (1000 * 60));
+      currentData.duration = `${diffMins} 分間`;
+
+      document.getElementById('endTime').textContent = currentData.endTime;
+      document.getElementById('duration').textContent = currentData.duration;
+    }
+
     // 保存ボタンを押した時の処理
     function saveRecord(e) {
       e.preventDefault();
@@ -191,10 +295,16 @@
         return;
       }
 
+      const mapUrl = (currentData.latitude && currentData.longitude) 
+        ? `https://maps.google.com/?q=${currentData.latitude},${currentData.longitude}` 
+        : '位置情報なし';
+
       const record = {
+        id: Date.now(),
         startTime: currentData.startTime,
-        latitude: currentData.latitude,
-        longitude: currentData.longitude,
+        endTime: currentData.endTime || '未記録',
+        duration: currentData.duration || '-',
+        mapUrl: mapUrl,
         visitTarget: document.getElementById('visitTarget').value,
         attendee: document.getElementById('attendeeName').value + ' ' + document.getElementById('title').value,
         content: document.getElementById('meetingContent').value
@@ -203,15 +313,109 @@
       // データの保存（LocalStorage）
       let logs = JSON.parse(localStorage.getItem('meetingLogs') || '[]');
       logs.push(record);
-      localStorage.getItem('meetingLogs', JSON.stringify(logs));
+      localStorage.setItem('meetingLogs', JSON.stringify(logs));
 
       alert('保存しました！');
       
-      // フォームの初期化
+      // フォームの初期化と再描画
       document.getElementById('recordForm').reset();
       document.getElementById('status').style.display = 'none';
-      currentData = { startTime: '', latitude: null, longitude: null };
+      document.getElementById('startTime').textContent = '-';
+      document.getElementById('endTime').textContent = '未記録';
+      document.getElementById('duration').textContent = '-';
+      currentData = { startTime: '', startDateObj: null, endTime: '', duration: '', latitude: null, longitude: null };
+      renderLogs();
+    }
+
+    // ログ一覧の表示処理
+    function renderLogs() {
+      const container = document.getElementById('logContainer');
+      const logs = JSON.parse(localStorage.getItem('meetingLogs') || '[]');
+
+      if (logs.length === 0) {
+        container.innerHTML = '<p style="color: #8e8e93; font-size: 0.9rem;">保存された記録はありません。</p>';
+        return;
+      }
+
+      container.innerHTML = logs.map((log, index) => `
+        <div class="log-item">
+          <div class="log-header">#${index + 1} ${log.visitTarget}</div>
+          <div style="font-size: 0.85rem; color: #3a3a3c;">
+            <strong>開始:</strong> ${log.startTime}<br>
+            <strong>終了:</strong> ${log.endTime}（滞在: ${log.duration}）<br>
+            <strong>同席:</strong> ${log.attendee}<br>
+            <strong>内容:</strong> ${log.content}<br>
+            <strong>位置:</strong> <a href="${log.mapUrl}" target="_blank">Google Map</a>
+          </div>
+          <div class="log-actions">
+            <button class="btn-sm btn-mail-sm" onclick="sendSingleMail(${log.id})">メール作成</button>
+            <button class="btn-sm btn-del-sm" onclick="deleteLog(${log.id})">削除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 個別ログのメール送信
+    function sendSingleMail(id) {
+      const logs = JSON.parse(localStorage.getItem('meetingLogs') || '[]');
+      const log = logs.find(item => item.id === id);
+      if (!log) return;
+
+      const subject = encodeURIComponent(`【打合せ記録】${log.visitTarget}`);
+      const body = encodeURIComponent(
+        `■ 訪問先: ${log.visitTarget}\n` +
+        `■ 開始日時: ${log.startTime}\n` +
+        `■ 終了日時: ${log.endTime}\n` +
+        `■ 滞在時間: ${log.duration}\n` +
+        `■ 打合せ者: ${log.attendee}\n` +
+        `■ 内容:\n${log.content}\n\n` +
+        `■ 位置情報:\n${log.mapUrl}`
+      );
+
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+
+    // 全件まとめてメール送信
+    function sendAllMail() {
+      const logs = JSON.parse(localStorage.getItem('meetingLogs') || '[]');
+      if (logs.length === 0) {
+        alert('送信する記録がありません。');
+        return;
+      }
+
+      const subject = encodeURIComponent(`【業務打合せ記録】全${logs.length}件`);
+      let bodyText = `業務打合せ記録一覧（全${logs.length}件）\n====================\n\n`;
+
+      logs.forEach((log, i) => {
+        bodyText += `【件名 #${i + 1}】${log.visitTarget}\n`;
+        bodyText += `開始日時: ${log.startTime}\n`;
+        bodyText += `終了日時: ${log.endTime}\n`;
+        bodyText += `滞在時間: ${log.duration}\n`;
+        bodyText += `打合せ者: ${log.attendee}\n`;
+        bodyText += `内容:\n${log.content}\n`;
+        bodyText += `位置情報: ${log.mapUrl}\n`;
+        bodyText += `--------------------\n\n`;
+      });
+
+      window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+    }
+
+    // 個別削除
+    function deleteLog(id) {
+      if (!confirm('この記録を削除してもよろしいですか？')) return;
+      let logs = JSON.parse(localStorage.getItem('meetingLogs') || '[]');
+      logs = logs.filter(item => item.id !== id);
+      localStorage.setItem('meetingLogs', JSON.stringify(logs));
+      renderLogs();
+    }
+
+    // 全削除
+    function clearAllLogs() {
+      if (!confirm('全ての記録を消去します。よろしいですか？')) return;
+      localStorage.removeItem('meetingLogs');
+      renderLogs();
     }
   </script>
 </body>
 </html>
+
