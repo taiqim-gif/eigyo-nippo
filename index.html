@@ -1,805 +1,462 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="mobile-web-app-capable" content="yes">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>営業日報</title>
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#f7f8fa;
-  --card:#ffffff;
-  --text:#333;
-  --sub:#777;
-  --border:#dfe3e8;
+  :root{
+    --bg:#FAF6EF;
+    --card:#FFFFFF;
+    --ink:#4A4340;
+    --ink-soft:#9C948C;
+    --line:#EFE7DA;
 
-  --daily:#e8f2f8;
-  --vehicle:#e8f4ed;
-  --start:#dcecf7;
-  --end:#f9eadc;
-  --record:#eee5f6;
-  --mail:#f8e6ed;
-  --delete:#f7e4e4;
+    --mint:#8FD9C4;      --mint-dark:#5FBFA5;      --mint-ink:#12503F;
+    --peach:#FFC9A6;     --peach-dark:#FF9F6B;     --peach-ink:#7A3E12;
+    --lavender:#D3C6F5;  --lavender-dark:#B4A0E8;  --lavender-ink:#3B2E63;
+    --sky:#AEDDF2;       --sky-dark:#7FC2E3;       --sky-ink:#0B4A66;
+    --pink:#FFC1D3;      --pink-dark:#FF97B3;      --pink-ink:#A6395E;
+    --butter:#FFE39B;    --butter-dark:#F5C542;    --butter-ink:#6B4E00;
 
-  --radius:14px;
-}
-
-*{
-  box-sizing:border-box;
-}
-
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;
-  font-size:16px;
-}
-
-button,
-input,
-select,
-textarea{
-  font:inherit;
-}
-
-button{
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:12px 16px;
-  background:white;
-  color:var(--text);
-  cursor:pointer;
-}
-
-button:active{
-  transform:scale(.98);
-}
-
-input,
-select,
-textarea{
-  width:100%;
-  border:1px solid var(--border);
-  border-radius:10px;
-  background:#fff;
-  padding:11px 12px;
-  color:var(--text);
-}
-
-textarea{
-  min-height:100px;
-  resize:vertical;
-}
-
-.app{
-  max-width:700px;
-  margin:0 auto;
-  padding:10px 12px 30px;
-}
-
-/* ==============================
-   ヘッダー
-============================== */
-
-.header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:10px;
-}
-
-.header-title{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  min-width:0;
-}
-
-.header-title h1{
-  margin:0;
-  font-size:22px;
-  white-space:nowrap;
-}
-
-.date-display{
-  background:var(--daily);
-  border-radius:10px;
-  padding:7px 10px;
-  font-size:14px;
-  white-space:nowrap;
-}
-
-.header-button{
-  min-width:110px;
-  background:var(--vehicle);
-}
-
-/* ==============================
-   画面
-============================== */
-
-.screen{
-  display:none;
-}
-
-.screen.active{
-  display:block;
-}
-
-.card{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:16px;
-  margin-bottom:12px;
-}
-
-.section-title{
-  font-weight:700;
-  margin-bottom:10px;
-}
-
-.visit-number{
-  display:inline-block;
-  background:var(--daily);
-  border-radius:10px;
-  padding:7px 12px;
-  font-weight:700;
-  margin-bottom:12px;
-}
-
-.label{
-  display:block;
-  font-size:14px;
-  color:var(--sub);
-  margin-bottom:5px;
-}
-
-.field{
-  margin-bottom:12px;
-}
-
-.row{
-  display:flex;
-  gap:8px;
-}
-
-.row > *{
-  flex:1;
-}
-
-.primary{
-  width:100%;
-  font-weight:700;
-  padding:14px;
-}
-
-.start-button{
-  background:var(--start);
-}
-
-.end-button{
-  background:var(--end);
-}
-
-.mail-button{
-  background:var(--mail);
-  margin-bottom:10px;
-}
-
-.delete-button{
-  width:100%;
-  background:var(--delete);
-}
-
-/* ==============================
-   訪問先入力
-============================== */
-
-.visit-target{
-  font-size:18px;
-}
-
-.info-text{
-  color:var(--sub);
-  font-size:13px;
-  line-height:1.5;
-}
-
-/* ==============================
-   面談入力
-============================== */
-
-.person-row{
-  display:flex;
-  gap:8px;
-}
-
-.person-row input{
-  flex:1;
-}
-
-.person-row select{
-  width:110px;
-  flex:none;
-}
-
-.content-type{
-  margin-bottom:8px;
-}
-
-/* ==============================
-   完了確認カード
-============================== */
-
-.time-summary{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  background:#f6f7f8;
-  border-radius:10px;
-  padding:12px;
-  margin-bottom:12px;
-}
-
-.time-summary-label{
-  color:var(--sub);
-  font-size:14px;
-}
-
-.time-summary-value{
-  font-weight:700;
-}
-
-/* ==============================
-   車両情報
-============================== */
-
-.vehicle-status{
-  background:var(--vehicle);
-  border-radius:10px;
-  padding:10px 12px;
-  margin-bottom:12px;
-  font-weight:700;
-}
-
-.vehicle-block{
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:14px;
-  margin-bottom:12px;
-}
-
-.vehicle-block.departure{
-  background:#f5faf7;
-}
-
-.vehicle-block.return{
-  background:#fbf7f2;
-}
-
-.vehicle-title{
-  font-weight:700;
-  margin-bottom:10px;
-}
-
-.vehicle-action{
-  width:100%;
-  margin-top:8px;
-  font-weight:700;
-}
-
-.departure-button{
-  background:var(--start);
-}
-
-.return-button{
-  background:var(--end);
-}
-
-/* ==============================
-   小さい画面
-============================== */
-
-@media(max-width:480px){
-
-  .app{
-    padding:8px 9px 24px;
+    --radius:16px;
   }
 
-  .header-title h1{
-    font-size:20px;
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic Medium",sans-serif;
+    -webkit-font-smoothing:antialiased;
   }
 
-  .date-display{
-    font-size:13px;
-    padding:6px 8px;
+  body{ padding-bottom:40px; }
+
+  header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:linear-gradient(90deg,#EADFFB 0%,#DCEFFB 55%,#DFF5EC 100%);
+    border-bottom:1px solid var(--line);
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
   }
 
-  .header-button{
-    min-width:100px;
-    padding:10px 11px;
+  header .date{
+    font-size:14px;
+    font-weight:700;
+    color:var(--ink);
+    flex:0 0 auto;
   }
+
+  .nav-btn{
+    border:1.5px solid #FFFFFF;
+    background:#FFFFFFB0;
+    color:var(--ink);
+    border-radius:999px;
+    padding:9px 16px;
+    font-size:13.5px;
+    font-weight:700;
+    font-family:inherit;
+    cursor:pointer;
+  }
+
+  .nav-btn.active-mint{ background:var(--mint); color:var(--mint-ink); border-color:var(--mint-dark); }
+  .nav-btn.active-peach{ background:var(--peach); color:var(--peach-ink); border-color:var(--peach-dark); }
+
+  main{ max-width:520px; margin:0 auto; padding:16px; }
+
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  h2{
+    font-size:15px;
+    font-weight:700;
+    margin:20px 0 10px;
+    color:var(--ink);
+    position:relative;
+    padding-left:14px;
+  }
+  h2::before{
+    content:"";
+    position:absolute;
+    left:0; top:5px;
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--mint-dark);
+  }
+  h2:first-child{ margin-top:4px; }
 
   .card{
-    padding:13px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 2px 10px rgba(80,60,30,0.05);
   }
 
-  button{
-    padding:11px 13px;
+  .field{ margin-bottom:14px; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{ display:block; font-size:12px; color:var(--ink-soft); margin-bottom:6px; }
+
+  input[type=text], input[type=number], select, textarea{
+    width:100%;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:11px 12px;
+    font-size:15px;
+    font-family:inherit;
+    background:#FFFDF9;
+    color:var(--ink);
   }
-}
+
+  input:disabled, select:disabled{ background:#F2EEE4; color:var(--ink-soft); }
+
+  textarea{ min-height:70px; resize:vertical; }
+
+  input:focus, select:focus, textarea:focus{
+    outline:none;
+    border-color:var(--lavender-dark);
+    background:#fff;
+  }
+
+  .btn{
+    display:block;
+    width:100%;
+    border:none;
+    border-radius:12px;
+    padding:14px;
+    font-size:15px;
+    font-weight:700;
+    font-family:inherit;
+    cursor:pointer;
+    text-align:center;
+  }
+
+  .btn-lavender{ background:var(--lavender); color:var(--lavender-ink); }
+  .btn-mint{ background:var(--mint); color:var(--mint-ink); }
+  .btn-peach{ background:var(--peach); color:var(--peach-ink); }
+  .btn-sky{ background:var(--sky); color:var(--sky-ink); }
+
+  .btn-outline-mint{ background:#fff; color:var(--mint-ink); border:1.5px solid var(--mint); }
+  .btn-outline-pink{ background:#fff; color:var(--pink-ink); border:1.5px solid var(--pink); }
+
+  .btn-text{
+    background:none; border:none;
+    color:var(--ink-soft);
+    font-size:13px;
+    font-family:inherit;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:6px 0;
+  }
+
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .row-gap{ display:flex; gap:10px; }
+  .row-gap > *{ flex:1; }
+
+  .distance-controls{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    margin-top:10px;
+  }
+
+  .dial{
+    width:96px; height:96px;
+    flex:0 0 auto;
+    border-radius:50%;
+    background:linear-gradient(150deg,#ffffff 0%, var(--sky) 130%);
+    border:2px solid var(--sky-dark);
+    position:relative;
+    touch-action:none;
+    cursor:grab;
+  }
+  .dial::before{
+    content:"↻";
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    color:var(--sky-ink);
+    opacity:.5;
+    pointer-events:none;
+  }
+  .dial-rotor{ position:absolute; inset:0; pointer-events:none; }
+  .dial-dot{
+    position:absolute;
+    top:5px; left:50%;
+    width:9px; height:9px;
+    margin-left:-4.5px;
+    border-radius:50%;
+    background:var(--sky-ink);
+  }
+  .dial.disabled{ opacity:.4; pointer-events:none; }
+  .dial-hint{
+    text-align:center;
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+
+  .status-pill{
+    display:inline-block;
+    font-size:12px;
+    font-weight:700;
+    padding:4px 12px;
+    border-radius:999px;
+    background:#F2EEE4;
+    color:var(--ink-soft);
+  }
+  .status-pill.on{ background:#E4F1EC; color:var(--mint-ink); }
+
+  .chip-group{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    padding:9px 14px;
+    border-radius:999px;
+    border:1.5px solid var(--line);
+    background:#fff;
+    font-size:13.5px;
+    font-family:inherit;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .chip:active{
+    background:var(--butter);
+    border-color:var(--butter-dark);
+    color:var(--butter-ink);
+  }
+
+  .visit-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-left:5px solid var(--mint);
+    border-radius:var(--radius);
+    padding:14px;
+    margin-bottom:10px;
+  }
+
+  .visit-card .top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .visit-card .target{ font-size:15px; font-weight:700; }
+  .visit-card .time{ font-size:12px; color:var(--ink-soft); }
+  .visit-card .meta{ font-size:13px; color:var(--ink-soft); margin-bottom:4px; }
+  .visit-card .content{ font-size:13.5px; line-height:1.5; white-space:pre-wrap; margin-bottom:8px; }
+
+  .card-action{
+    flex:1;
+    padding:9px;
+    border-radius:10px;
+    font-size:12.5px;
+    font-family:inherit;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .card-action.edit{ background:#EAF4FB; color:var(--sky-ink); border:1.5px solid var(--sky); }
+  .card-action.delete{ background:#FDECF1; color:var(--pink-ink); border:1.5px solid var(--pink); }
+
+  .empty{ text-align:center; color:var(--ink-soft); font-size:13.5px; padding:26px 10px; }
+
+  .summary-line{ display:flex; justify-content:space-between; font-size:13.5px; padding:6px 0; }
+
+  .footer-actions{ margin:14px 0 6px; display:flex; flex-direction:column; gap:10px; }
+
+  .toast{
+    position:fixed;
+    left:50%; bottom:24px;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:#fff;
+    padding:11px 18px;
+    border-radius:999px;
+    font-size:13.5px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:50;
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
-
 </head>
-
 <body>
 
-<div class="app">
+<header>
+  <span class="date" id="dateDisplay"></span>
+  <button class="nav-btn" id="navHomeButton">ホーム</button>
+  <button class="nav-btn" id="navVehicleButton">車両</button>
+</header>
 
-  <!-- =========================
-       ヘッダー
-  ========================== -->
+<main>
 
-  <div class="header">
+  <!-- ============ ホーム（営業日報一覧）画面 ============ -->
+  <section id="reportScreen" class="screen active">
 
-```
-<div class="header-title">
-  <h1>営業日報</h1>
-  <div id="dateDisplay" class="date-display"></div>
-</div>
-
-<button
-  id="vehicleToggleButton"
-  class="header-button">
-  車両情報
-</button>
-```
-
-  </div>
-
-  <!-- =========================
-       営業日報画面
-  ========================== -->
-
-  <div id="reportScreen" class="screen active">
-
-```
-<div class="card">
-
-  <div id="visitNumber"
-       class="visit-number">
-    訪問先 1
-  </div>
-
-  <div class="field">
-
-    <label class="label">
-      訪問先
-    </label>
-
-    <input
-      id="visitTarget"
-      class="visit-target"
-      type="text"
-      placeholder="訪問先を入力">
-
-  </div>
-
-  <button
-    id="startButton"
-    class="primary start-button">
-    スタート
-  </button>
-
-</div>
-
-
-<!-- メール送信・全データ削除 -->
-
-<button
-  id="mailButton"
-  class="primary mail-button">
-  メール送信
-</button>
-
-<button
-  id="deleteAllButton"
-  class="delete-button">
-  全データ削除
-</button>
-```
-
-  </div>
-
-  <!-- =========================
-       面談入力画面
-  ========================== -->
-
-  <div id="meetingScreen" class="screen">
-
-```
-<div class="card">
-
-  <div id="meetingVisitNumber"
-       class="visit-number">
-    訪問先 1
-  </div>
-
-  <div class="field">
-
-    <label class="label">
-      訪問先
-    </label>
-
-    <input
-      id="meetingVisitTarget"
-      type="text">
-
-  </div>
-
-
-  <div class="field">
-
-    <label class="label">
-      面談者
-    </label>
-
-    <div class="person-row">
-
-      <input
-        id="meetingPerson"
-        type="text"
-        placeholder="面談者名">
-
-      <select id="meetingPersonTitle">
-
-        <option value="">敬称</option>
-        <option value="さん">さん</option>
-        <option value="社長">社長</option>
-        <option value="専務">専務</option>
-        <option value="常務">常務</option>
-        <option value="工場長">工場長</option>
-        <option value="部長">部長</option>
-        <option value="課長">課長</option>
-        <option value="係長">係長</option>
-
-      </select>
-
+    <div class="card">
+      <div class="field">
+        <label for="homeVisitTarget">訪問先</label>
+        <input type="text" id="homeVisitTarget" placeholder="例：〇〇商店">
+      </div>
+      <button class="btn btn-lavender" id="homeStartButton">開始</button>
     </div>
 
-  </div>
-
-
-  <div class="field">
-
-    <label class="label">
-      内容
-    </label>
-
-    <select
-      id="meetingContentType"
-      class="content-type">
-
-      <option value="">内容区分</option>
-      <option value="営業">営業</option>
-      <option value="配達">配達</option>
-      <option value="引取">引取</option>
-      <option value="打合">打合</option>
-      <option value="定期訪問">定期訪問</option>
-
-    </select>
-
-    <textarea
-      id="meetingContent"
-      placeholder="内容を入力"></textarea>
-
-  </div>
-
-
-  <button
-    id="endButton"
-    class="primary end-button">
-    終了
-  </button>
-
-</div>
-```
-
-  </div>
-
-  <!-- =========================
-       終了後確認・編集画面
-  ========================== -->
-
-  <div id="finishScreen" class="screen">
-
-```
-<div class="card">
-
-  <div id="finishVisitNumber"
-       class="visit-number">
-    訪問先 1
-  </div>
-
-  <div class="field">
-
-    <label class="label">
-      訪問先
-    </label>
-
-    <input
-      id="finishVisitTarget"
-      type="text">
-
-  </div>
-
-
-  <div class="time-summary">
-
-    <div class="time-summary-label">
-      時間
+    <div class="footer-actions">
+      <button class="btn btn-outline-mint" id="mailButton">日報をメール送信</button>
+      <button class="btn btn-outline-pink" id="deleteAllButton">全データを削除</button>
     </div>
 
-    <div id="finishTimeSummary"
-         class="time-summary-value">
+    <h2>本日の訪問（<span id="visitCount">0</span>件）</h2>
+    <div id="visitList"></div>
+
+  </section>
+
+
+  <!-- ============ 訪問入力／編集画面 ============ -->
+  <section id="visitScreen" class="screen">
+
+    <h2 id="visitScreenTitle">訪問先</h2>
+
+    <div class="card">
+      <div class="field">
+        <label for="visitTarget">訪問先名</label>
+        <input type="text" id="visitTarget" placeholder="例：〇〇商店">
+      </div>
+
+      <div class="field" id="visitStatusField" style="display:none;">
+        <span class="status-pill on">訪問中</span>
+        <span style="font-size:12px;color:var(--ink-soft);margin-left:8px;" id="visitStartedAt"></span>
+      </div>
     </div>
 
-  </div>
+    <div class="card" id="meetingCard" style="display:none;">
 
+      <div class="row-gap">
+        <div class="field" style="flex:2;">
+          <label for="meetingPerson">面談者</label>
+          <input type="text" id="meetingPerson" placeholder="例：山田">
+        </div>
+        <div class="field" style="flex:1;">
+          <label for="meetingPersonTitle">敬称</label>
+          <input type="text" id="meetingPersonTitle" list="honorificList" placeholder="さん">
+          <datalist id="honorificList">
+            <option value="社長">
+            <option value="工場長">
+            <option value="専務">
+            <option value="常務">
+            <option value="部長">
+            <option value="課長">
+          </datalist>
+        </div>
+      </div>
 
-  <div class="field">
+      <div class="field">
+        <label>内容区分（押すと下の内容欄に転記されます・何度でも押せます）</label>
+        <div class="chip-group" id="contentTypeButtons"></div>
+      </div>
 
-    <label class="label">
-      開始時間
-    </label>
+      <div class="field">
+        <label for="meetingContent">内容</label>
+        <textarea id="meetingContent" placeholder="打合せ内容を入力"></textarea>
+      </div>
 
-    <input
-      id="finishStartTime"
-      type="datetime-local">
+      <div class="field">
+        <label for="meetingNotes">特記事項</label>
+        <textarea id="meetingNotes" placeholder="特になければ空欄でOK"></textarea>
+      </div>
 
-  </div>
-
-
-  <div class="field">
-
-    <label class="label">
-      面談者
-    </label>
-
-    <div class="person-row">
-
-      <input
-        id="finishPerson"
-        type="text"
-        placeholder="面談者名">
-
-      <select id="finishPersonTitle">
-
-        <option value="">敬称</option>
-        <option value="さん">さん</option>
-        <option value="社長">社長</option>
-        <option value="専務">専務</option>
-        <option value="常務">常務</option>
-        <option value="工場長">工場長</option>
-        <option value="部長">部長</option>
-        <option value="課長">課長</option>
-        <option value="係長">係長</option>
-
-      </select>
-
+      <button class="btn btn-mint" id="endButton">記録終了</button>
     </div>
 
-  </div>
+  </section>
 
 
-  <div class="field">
+  <!-- ============ 車両情報画面 ============ -->
+  <section id="vehicleScreen" class="screen">
 
-    <label class="label">
-      内容
-    </label>
+    <h2>車両情報</h2>
 
-    <select
-      id="finishContentType"
-      class="content-type">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <strong style="font-size:14px;">出発</strong>
+        <span class="status-pill" id="departureStatusPill">未出発</span>
+      </div>
 
-      <option value="">内容区分</option>
-      <option value="営業">営業</option>
-      <option value="配達">配達</option>
-      <option value="引取">引取</option>
-      <option value="打合">打合</option>
-      <option value="定期訪問">定期訪問</option>
+      <div class="field">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+          <label for="departureDistance" style="margin-bottom:0;">走行距離</label>
+          <span style="font-size:12px;color:var(--ink-soft);" id="departureTimeText"></span>
+        </div>
+        <input type="number" inputmode="decimal" id="departureDistance" placeholder="例：12345">
+        <div class="distance-controls">
+          <div class="dial" id="departureDial" data-target="departureDistance">
+            <div class="dial-rotor"><span class="dial-dot"></span></div>
+          </div>
+        </div>
+        <div class="dial-hint">ダイヤル中心の近くを回すと細かく、外側を回すと大きく変化します</div>
+      </div>
 
-    </select>
-
-    <textarea
-      id="finishContent"
-      placeholder="内容を入力"></textarea>
-
-  </div>
-
-
-  <div class="field">
-
-    <label class="label">
-      終了時間
-    </label>
-
-    <input
-      id="finishEndTime"
-      type="datetime-local">
-
-  </div>
-
-
-  <!-- 記録するボタンは使用しない -->
-
-  <button
-    id="recordButton"
-    class="primary"
-    style="display:none;">
-    記録する
-  </button>
-
-</div>
-```
-
-  </div>
-
-  <!-- =========================
-       車両情報画面
-  ========================== -->
-
-  <div id="vehicleScreen" class="screen">
-
-```
-<div class="card">
-
-  <div id="vehicleStatus"
-       class="vehicle-status">
-    発車前
-  </div>
-
-
-  <!-- 発車時 -->
-
-  <div class="vehicle-block departure">
-
-    <div class="vehicle-title">
-      発車時
+      <div class="row-gap">
+        <button class="btn btn-peach" id="departureButton">出発</button>
+        <button class="btn btn-text" id="departureResetButton" style="display:none;flex:0 0 auto;">やり直す</button>
+      </div>
     </div>
 
-    <div class="field">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <strong style="font-size:14px;">帰社</strong>
+        <span class="status-pill" id="returnStatusPill">未帰社</span>
+      </div>
 
-      <label class="label">
-        走行距離
-      </label>
+      <div class="field">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+          <label for="returnDistance" style="margin-bottom:0;">走行距離</label>
+          <span style="font-size:12px;color:var(--ink-soft);" id="returnTimeText"></span>
+        </div>
+        <input type="number" inputmode="decimal" id="returnDistance">
+        <div class="distance-controls">
+          <div class="dial" id="returnDial" data-target="returnDistance">
+            <div class="dial-rotor"><span class="dial-dot"></span></div>
+          </div>
+        </div>
+        <div class="dial-hint">ダイヤル中心の近くを回すと細かく、外側を回すと大きく変化します</div>
+      </div>
 
-      <input
-        id="departureDistance"
-        type="number"
-        inputmode="numeric"
-        placeholder="走行距離">
+      <div class="field">
+        <label for="returnFuel">給油量（L）</label>
+        <input type="number" inputmode="decimal" id="returnFuel" placeholder="空欄Ok">
+      </div>
 
+      <div class="row-gap">
+        <button class="btn btn-sky" id="returnButton">帰社</button>
+        <button class="btn btn-text" id="returnResetButton" style="display:none;flex:0 0 auto;">やり直す</button>
+      </div>
     </div>
 
-    <div class="field">
-
-      <label class="label">
-        時間
-      </label>
-
-      <input
-        id="departureTime"
-        type="datetime-local">
-
+    <div class="card" id="distanceSummaryCard" style="display:none;">
+      <div class="summary-line">
+        <span style="color:var(--ink-soft);">本日の走行距離</span>
+        <span style="font-weight:700;" id="distanceSummaryText"></span>
+      </div>
     </div>
 
-    <div class="field">
+  </section>
 
-      <label class="label">
-        位置情報
-      </label>
+</main>
 
-      <input
-        id="departureLocation"
-        type="text"
-        placeholder="位置情報">
-
-    </div>
-
-    <button
-      id="departureButton"
-      class="vehicle-action departure-button">
-      発車
-    </button>
-
-  </div>
-
-
-  <!-- 帰社時 -->
-
-  <div class="vehicle-block return">
-
-    <div class="vehicle-title">
-      帰社時
-    </div>
-
-    <div class="field">
-
-      <label class="label">
-        走行距離
-      </label>
-
-      <input
-        id="returnDistance"
-        type="number"
-        inputmode="numeric"
-        placeholder="走行距離">
-
-    </div>
-
-    <div class="field">
-
-      <label class="label">
-        時間
-      </label>
-
-      <input
-        id="returnTime"
-        type="datetime-local">
-
-    </div>
-
-    <div class="field">
-
-      <label class="label">
-        位置情報
-      </label>
-
-      <input
-        id="returnLocation"
-        type="text"
-        placeholder="位置情報">
-
-    </div>
-
-    <div class="field">
-
-      <label class="label">
-        給油量
-      </label>
-
-      <input
-        id="returnFuel"
-        type="number"
-        inputmode="decimal"
-        step="0.1"
-        placeholder="給油量">
-
-    </div>
-
-    <button
-      id="returnButton"
-      class="vehicle-action return-button">
-      帰社
-    </button>
-
-  </div>
-
-</div>
-```
-
-  </div>
-
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
 
@@ -809,38 +466,14 @@ textarea{
 
 const LOG_KEY = "meetingLogs";
 const VEHICLE_KEY = "dailyVehicleInfo";
+const LAST_OPEN_KEY = "appLastOpenDate";
 
-let meetingLogs =
-  JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+const CONTENT_TYPES = ["営業","配達","新規営業","集金","保安","苦情"];
 
-let dailyVehicleInfo =
-  JSON.parse(localStorage.getItem(VEHICLE_KEY) || "{}");
+let meetingLogs = JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+let dailyVehicleInfo = JSON.parse(localStorage.getItem(VEHICLE_KEY) || "{}");
 
-
-/* =========================================================
-   現在の訪問
-========================================================= */
-
-let currentVisit = {
-  number:1,
-  target:"",
-
-  startTime:"",
-  startLocation:"",
-  startLat:"",
-  startLng:"",
-
-  endTime:"",
-  endLocation:"",
-  endLat:"",
-  endLng:"",
-
-  person:"",
-  personTitle:"",
-
-  contentType:"",
-  content:""
-};
+let currentVisit = null;
 
 
 /* =========================================================
@@ -848,49 +481,66 @@ let currentVisit = {
 ========================================================= */
 
 function getToday(){
-
   const d = new Date();
-
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2,"0");
   const day = String(d.getDate()).padStart(2,"0");
-
   return `${y}-${m}-${day}`;
 }
 
-
 function getNowDateTimeLocal(){
-
   const d = new Date();
-
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2,"0");
   const day = String(d.getDate()).padStart(2,"0");
-
   const h = String(d.getHours()).padStart(2,"0");
   const min = String(d.getMinutes()).padStart(2,"0");
-
   return `${y}-${m}-${day}T${h}:${min}`;
 }
 
+function formatTimeOnly(value){
+  if(!value) return "";
+  const parts = value.split("T");
+  if(parts.length < 2) return value;
+  return parts[1].slice(0,5);
+}
 
-function saveLogs(){
+function saveLogs(){ localStorage.setItem(LOG_KEY, JSON.stringify(meetingLogs)); }
+function saveVehicle(){ localStorage.setItem(VEHICLE_KEY, JSON.stringify(dailyVehicleInfo)); }
 
-  localStorage.setItem(
-    LOG_KEY,
-    JSON.stringify(meetingLogs)
-  );
+function showToast(message){
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove("show"), 1800);
+}
 
+function escapeHtml(str){
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
 
-function saveVehicle(){
+/* =========================================================
+   位置情報（裏側で取得しデータに記録するのみ。画面には表示しない）
+========================================================= */
 
-  localStorage.setItem(
-    VEHICLE_KEY,
-    JSON.stringify(dailyVehicleInfo)
-  );
-
+function getLocation(){
+  return new Promise(resolve => {
+    if(!navigator.geolocation){
+      resolve({ location:"", lat:"", lng:"" });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        resolve({ location:`${lat},${lng}`, lat, lng });
+      },
+      () => resolve({ location:"", lat:"", lng:"" }),
+      { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
+    );
+  });
 }
 
 
@@ -899,439 +549,386 @@ function saveVehicle(){
 ========================================================= */
 
 function updateDate(){
-
   const d = new Date();
-
-  const y = d.getFullYear();
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-
-  const week =
-    ["日","月","火","水","木","金","土"][d.getDay()];
-
+  const week = ["日","月","火","水","木","金","土"][d.getDay()];
   document.getElementById("dateDisplay").textContent =
-    `${y}/${m}/${day}（${week}）`;
-
+    `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${week}）`;
 }
 
 
 /* =========================================================
-   今日の訪問番号
+   走行距離：回転ダイヤル（ぐるぐる回して増減）
+   中心の近くを回すと細かく、外側を回すほど大きく変化する
+   （半径に応じて1度あたりの変化量が変わる）。
 ========================================================= */
 
-function getNextVisitNumber(){
+function attachDial(dial){
+  const inputId = dial.getAttribute("data-target");
+  const rotor = dial.querySelector(".dial-rotor");
+  let dragging = false;
+  let lastAngle = 0;
 
-  const today = getToday();
+  function getVector(evt){
+    const rect = dial.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const point = evt.touches ? evt.touches[0] : evt;
+    return { dx: point.clientX - cx, dy: point.clientY - cy };
+  }
 
-  const todayLogs =
-    meetingLogs.filter(x => x.date === today);
+  function start(evt){
+    if(dial.classList.contains("disabled")) return;
+    dragging = true;
+    const { dx, dy } = getVector(evt);
+    lastAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+    evt.preventDefault();
+  }
 
-  return todayLogs.length + 1;
+  function move(evt){
+    if(!dragging) return;
 
+    const { dx, dy } = getVector(evt);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    let delta = angle - lastAngle;
+    if(delta > 180) delta -= 360;
+    if(delta < -180) delta += 360;
+    lastAngle = angle;
+
+    // 半径が大きいほど1度あたりのkm変化量を大きくする
+    const radius = Math.max(24, Math.hypot(dx, dy));
+    const kmPerDegree = Math.min(3, radius / 250);
+
+    const input = document.getElementById(inputId);
+    let val = parseFloat(input.value);
+    if(isNaN(val)) val = 0;
+
+    val = Math.max(0, Math.round(val + delta * kmPerDegree));
+    input.value = val;
+    input.dispatchEvent(new Event("input"));
+
+    rotor.style.transform = `rotate(${angle}deg)`;
+    evt.preventDefault();
+  }
+
+  function end(){
+    if(dragging){
+      dragging = false;
+      document.getElementById(inputId).dispatchEvent(new Event("change"));
+    }
+  }
+
+  dial.addEventListener("mousedown", start);
+  dial.addEventListener("touchstart", start, { passive:false });
+  window.addEventListener("mousemove", move, { passive:false });
+  window.addEventListener("touchmove", move, { passive:false });
+  window.addEventListener("mouseup", end);
+  window.addEventListener("touchend", end);
 }
 
-
-function updateVisitNumber(){
-
-  const number =
-    getNextVisitNumber();
-
-  currentVisit.number =
-    number;
-
-  document.getElementById("visitNumber").textContent =
-    `訪問先 ${number}`;
-
-  document.getElementById("meetingVisitNumber").textContent =
-    `訪問先 ${number}`;
-
-  document.getElementById("finishVisitNumber").textContent =
-    `訪問先 ${number}`;
-
-}
+document.querySelectorAll(".dial").forEach(attachDial);
 
 
 /* =========================================================
-   画面切替
+   画面切替（ヘッダーのナビが常に切替の入口）
 ========================================================= */
 
 function showScreen(name){
-
-  document.querySelectorAll(".screen")
-    .forEach(screen => {
-
-      screen.classList.remove("active");
-
-    });
-
-
-  document.getElementById(name + "Screen")
-    .classList.add("active");
-
-
-  window.scrollTo({
-    top:0,
-    behavior:"auto"
-  });
-
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(name + "Screen").classList.add("active");
+  window.scrollTo({ top:0, behavior:"auto" });
 }
+
+function updateNav(screenName){
+  const isHome = (screenName === "report" || screenName === "visit");
+  document.getElementById("navHomeButton").classList.toggle("active-mint", isHome);
+  document.getElementById("navVehicleButton").classList.toggle("active-peach", !isHome);
+}
+
+function goToReport(){
+  renderReportScreen();
+  showScreen("report");
+  updateNav("report");
+}
+
+function goToVehicle(){
+  renderVehicleScreen();
+  showScreen("vehicle");
+  updateNav("vehicle");
+}
+
+function goToVisit(){
+  showScreen("visit");
+  updateNav("visit");
+}
+
+function confirmLeaveVisitIfNeeded(){
+  if(currentVisit && !currentVisit.isEdit){
+    return window.confirm("訪問中のデータは保存されません。移動しますか？");
+  }
+  return true;
+}
+
+document.getElementById("navHomeButton").addEventListener("click", () => {
+  if(!confirmLeaveVisitIfNeeded()) return;
+  currentVisit = null;
+  goToReport();
+});
+
+document.getElementById("navVehicleButton").addEventListener("click", () => {
+  if(!confirmLeaveVisitIfNeeded()) return;
+  currentVisit = null;
+  goToVehicle();
+});
 
 
 /* =========================================================
-   位置情報
-   データとして保存する。
-   画面には表示しない。
+   ホーム（営業日報一覧）画面の描画
 ========================================================= */
 
-function getLocation(){
+function renderReportScreen(){
+  const today = getToday();
+  const logs = meetingLogs
+    .filter(x => x.date === today)
+    .sort((a,b) => (b.startTime || "").localeCompare(a.startTime || "")); // 新しい順
 
-  return new Promise(resolve => {
+  document.getElementById("visitCount").textContent = logs.length;
 
-    if(!navigator.geolocation){
+  const list = document.getElementById("visitList");
+  list.innerHTML = "";
 
-      resolve({
-        location:"",
-        lat:"",
-        lng:""
-      });
-
-      return;
-    }
-
-
-    navigator.geolocation.getCurrentPosition(
-
-      position => {
-
-        const lat =
-          position.coords.latitude;
-
-        const lng =
-          position.coords.longitude;
-
-
-        resolve({
-
-          location:`${lat},${lng}`,
-
-          lat:lat,
-
-          lng:lng
-
-        });
-
-      },
-
-      () => {
-
-        resolve({
-          location:"",
-          lat:"",
-          lng:""
-        });
-
-      },
-
-      {
-        enableHighAccuracy:true,
-        timeout:10000,
-        maximumAge:0
-      }
-
-    );
-
-  });
-
-}
-
-
-/* =========================================================
-   訪問開始
-========================================================= */
-
-document.getElementById("startButton")
-.addEventListener("click", async () => {
-
-  const target =
-    document.getElementById("visitTarget")
-    .value.trim();
-
-
-  if(!target){
-
-    document.getElementById("visitTarget")
-      .focus();
-
+  if(logs.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "本日の訪問記録はまだありません";
+    list.appendChild(empty);
     return;
-
   }
 
+  logs.forEach(log => {
+    const card = document.createElement("div");
+    card.className = "visit-card";
 
-  currentVisit.number =
-    getNextVisitNumber();
+    const timeRange = `${formatTimeOnly(log.startTime)} ～ ${formatTimeOnly(log.endTime)}`;
+    const person = [log.attendee, log.attendeeTitle].filter(Boolean).join("");
 
-  currentVisit.target =
-    target;
+    card.innerHTML = `
+      <div class="top">
+        <span class="target">No.${log.number || "-"}　${escapeHtml(log.target || "（訪問先未入力）")}</span>
+        <span class="time">${timeRange}</span>
+      </div>
+      ${person ? `<div class="meta">${escapeHtml(person)}</div>` : ""}
+      ${log.content ? `<div class="content">${escapeHtml(log.content)}</div>` : ""}
+      ${log.notes ? `<div class="content"><strong>特記事項：</strong>${escapeHtml(log.notes)}</div>` : ""}
+      <div class="row-gap">
+        <button class="card-action edit" data-id="${log.createdAt}">編集</button>
+        <button class="card-action delete" data-id="${log.createdAt}">削除</button>
+      </div>
+    `;
 
-  currentVisit.startTime =
-    getNowDateTimeLocal();
+    list.appendChild(card);
+  });
 
+  list.querySelectorAll(".edit").forEach(btn => {
+    btn.addEventListener("click", () => openEditVisit(btn.getAttribute("data-id")));
+  });
 
-  const location =
-    await getLocation();
-
-
-  currentVisit.startLocation =
-    location.location;
-
-  currentVisit.startLat =
-    location.lat;
-
-  currentVisit.startLng =
-    location.lng;
-
-
-  document.getElementById("meetingVisitTarget")
-    .value = target;
-
-  document.getElementById("meetingPerson")
-    .value = "";
-
-  document.getElementById("meetingPersonTitle")
-    .value = "";
-
-  document.getElementById("meetingContentType")
-    .value = "";
-
-  document.getElementById("meetingContent")
-    .value = "";
-
-
-  showScreen("meeting");
-
-});
-
-
-/* =========================================================
-   訪問終了
-========================================================= */
-
-document.getElementById("endButton")
-.addEventListener("click", async () => {
-
-  currentVisit.target =
-    document.getElementById("meetingVisitTarget")
-    .value.trim();
-
-  currentVisit.person =
-    document.getElementById("meetingPerson")
-    .value.trim();
-
-  currentVisit.personTitle =
-    document.getElementById("meetingPersonTitle")
-    .value;
-
-  currentVisit.contentType =
-    document.getElementById("meetingContentType")
-    .value;
-
-  currentVisit.content =
-    document.getElementById("meetingContent")
-    .value;
-
-  currentVisit.endTime =
-    getNowDateTimeLocal();
-
-
-  const location =
-    await getLocation();
-
-
-  currentVisit.endLocation =
-    location.location;
-
-  currentVisit.endLat =
-    location.lat;
-
-  currentVisit.endLng =
-    location.lng;
-
-
-  document.getElementById("finishVisitTarget")
-    .value = currentVisit.target;
-
-  document.getElementById("finishStartTime")
-    .value = currentVisit.startTime;
-
-  document.getElementById("finishEndTime")
-    .value = currentVisit.endTime;
-
-  document.getElementById("finishPerson")
-    .value = currentVisit.person;
-
-  document.getElementById("finishPersonTitle")
-    .value = currentVisit.personTitle;
-
-  document.getElementById("finishContentType")
-    .value = currentVisit.contentType;
-
-  document.getElementById("finishContent")
-    .value = currentVisit.content;
-
-
-  updateFinishTimeSummary();
-
-
-  showScreen("finish");
-
-
-  /*
-    終了後、自動的に記録する。
-  */
-
-  recordVisit();
-
-});
-
-
-/* =========================================================
-   開始－終了時間表示
-========================================================= */
-
-function updateFinishTimeSummary(){
-
-  const start =
-    document.getElementById("finishStartTime").value;
-
-  const end =
-    document.getElementById("finishEndTime").value;
-
-
-  const format = value => {
-
-    if(!value) return "";
-
-    return value
-      .replace("T"," ")
-      .replace(/:\d\d$/,"");
-
-  };
-
-
-  document.getElementById("finishTimeSummary")
-    .textContent =
-      `${format(start)} ～ ${format(end)}`;
-
+  list.querySelectorAll(".delete").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      if(!window.confirm("この訪問記録を削除しますか？")) return;
+      meetingLogs = meetingLogs.filter(x => x.createdAt !== id);
+      saveLogs();
+      renderReportScreen();
+      showToast("削除しました");
+    });
+  });
 }
 
 
 /* =========================================================
-   訪問記録
+   内容区分ボタン
+   ※選択式ではなく、押すたびに「内容」欄へ転記するだけの入力支援ボタン
 ========================================================= */
 
-function recordVisit(){
+function insertContentType(type){
+  const textarea = document.getElementById("meetingContent");
+  const text = textarea.value;
 
-  currentVisit.target =
-    document.getElementById("finishVisitTarget")
-    .value.trim();
+  const start = textarea.selectionStart != null ? textarea.selectionStart : text.length;
+  const end = textarea.selectionEnd != null ? textarea.selectionEnd : text.length;
 
-  currentVisit.startTime =
-    document.getElementById("finishStartTime")
-    .value;
+  const before = text.slice(0, start);
+  const after = text.slice(end);
 
-  currentVisit.endTime =
-    document.getElementById("finishEndTime")
-    .value;
+  let insertion = type + "：";
+  if(before.length > 0 && !before.endsWith("\n")){
+    insertion = "\n" + insertion;
+  }
 
-  currentVisit.person =
-    document.getElementById("finishPerson")
-    .value.trim();
+  textarea.value = before + insertion + after;
 
-  currentVisit.personTitle =
-    document.getElementById("finishPersonTitle")
-    .value;
+  const cursorPos = (before + insertion).length;
+  textarea.focus();
+  textarea.setSelectionRange(cursorPos, cursorPos);
+}
 
-  currentVisit.contentType =
-    document.getElementById("finishContentType")
-    .value;
-
-  currentVisit.content =
-    document.getElementById("finishContent")
-    .value;
-
-
-  const log = {
-
-    date:getToday(),
-
-    number:currentVisit.number,
-
-    target:currentVisit.target,
-
-    startTime:currentVisit.startTime,
-    startLocation:currentVisit.startLocation,
-
-    endTime:currentVisit.endTime,
-    endLocation:currentVisit.endLocation,
-
-    startLat:currentVisit.startLat,
-    startLng:currentVisit.startLng,
-
-    endLat:currentVisit.endLat,
-    endLng:currentVisit.endLng,
-
-    attendee:currentVisit.person,
-    attendeeTitle:currentVisit.personTitle,
-
-    contentType:currentVisit.contentType,
-    content:currentVisit.content,
-
-    createdAt:new Date().toISOString()
-
-  };
+function renderContentTypeButtons(){
+  const container = document.getElementById("contentTypeButtons");
+  container.innerHTML = "";
+  CONTENT_TYPES.forEach(type => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip";
+    btn.textContent = type;
+    btn.addEventListener("click", () => insertContentType(type));
+    container.appendChild(btn);
+  });
+}
 
 
-  meetingLogs.push(log);
+/* =========================================================
+   訪問の開始（ホーム画面のカードから直接開始）
+========================================================= */
 
-  saveLogs();
+function getNextVisitNumber(){
+  const today = getToday();
+  return meetingLogs.filter(x => x.date === today).length + 1;
+}
 
+document.getElementById("homeStartButton").addEventListener("click", async () => {
+  const target = document.getElementById("homeVisitTarget").value.trim();
+  if(!target){
+    document.getElementById("homeVisitTarget").focus();
+    return;
+  }
 
-  /* 新しい訪問入力へ */
+  const number = getNextVisitNumber();
+  const startTime = getNowDateTimeLocal();
+  const location = await getLocation();
 
   currentVisit = {
-
-    number:getNextVisitNumber(),
-
-    target:"",
-
-    startTime:"",
-    startLocation:"",
-    startLat:"",
-    startLng:"",
-
-    endTime:"",
-    endLocation:"",
-    endLat:"",
-    endLng:"",
-
-    person:"",
-    personTitle:"",
-
-    contentType:"",
-    content:""
-
+    isEdit:false,
+    number,
+    target,
+    startTime,
+    startLocation: location.location,
+    startLat: location.lat,
+    startLng: location.lng,
+    endTime:"", endLocation:"", endLat:"", endLng:"",
+    person:"", personTitle:"", content:"", notes:""
   };
 
+  document.getElementById("homeVisitTarget").value = "";
 
-  document.getElementById("visitTarget")
-    .value = "";
+  document.getElementById("visitScreenTitle").innerHTML =
+    `訪問先 <span>${number}</span>`;
+
+  document.getElementById("visitTarget").value = target;
+  document.getElementById("visitTarget").disabled = true;
+  document.getElementById("visitStatusField").style.display = "block";
+  document.getElementById("visitStartedAt").textContent = formatTimeOnly(startTime) + " 開始";
+  document.getElementById("meetingCard").style.display = "block";
+
+  document.getElementById("meetingPerson").value = "";
+  document.getElementById("meetingPersonTitle").value = "さん";
+  document.getElementById("meetingContent").value = "";
+  document.getElementById("meetingNotes").value = "";
+  document.getElementById("endButton").textContent = "記録終了";
+  renderContentTypeButtons();
+
+  goToVisit();
+  showToast("訪問を開始しました");
+});
 
 
-  updateVisitNumber();
+/* =========================================================
+   訪問記録の編集
+========================================================= */
 
-  showScreen("report");
+function openEditVisit(id){
+  const log = meetingLogs.find(x => x.createdAt === id);
+  if(!log) return;
 
+  currentVisit = { isEdit:true, editId:id };
+
+  document.getElementById("visitScreenTitle").textContent =
+    log.number ? `訪問先 ${log.number}（編集）` : "訪問記録を編集";
+
+  document.getElementById("visitTarget").value = log.target || "";
+  document.getElementById("visitTarget").disabled = false;
+  document.getElementById("visitStatusField").style.display = "none";
+  document.getElementById("meetingCard").style.display = "block";
+
+  document.getElementById("meetingPerson").value = log.attendee || "";
+  document.getElementById("meetingPersonTitle").value = log.attendeeTitle || "さん";
+  document.getElementById("meetingContent").value = log.content || "";
+  document.getElementById("meetingNotes").value = log.notes || "";
+  document.getElementById("endButton").textContent = "保存する";
+  renderContentTypeButtons();
+
+  goToVisit();
 }
+
+
+/* =========================================================
+   訪問終了／保存
+========================================================= */
+
+document.getElementById("endButton").addEventListener("click", async () => {
+
+  if(currentVisit.isEdit){
+    const log = meetingLogs.find(x => x.createdAt === currentVisit.editId);
+    if(log){
+      log.target = document.getElementById("visitTarget").value.trim();
+      log.attendee = document.getElementById("meetingPerson").value.trim();
+      log.attendeeTitle = document.getElementById("meetingPersonTitle").value.trim();
+      log.content = document.getElementById("meetingContent").value;
+      log.notes = document.getElementById("meetingNotes").value;
+      saveLogs();
+    }
+    currentVisit = null;
+    goToReport();
+    showToast("更新しました");
+    return;
+  }
+
+  currentVisit.person = document.getElementById("meetingPerson").value.trim();
+  currentVisit.personTitle = document.getElementById("meetingPersonTitle").value.trim();
+  currentVisit.content = document.getElementById("meetingContent").value;
+  currentVisit.notes = document.getElementById("meetingNotes").value;
+  currentVisit.endTime = getNowDateTimeLocal();
+
+  const location = await getLocation();
+  currentVisit.endLocation = location.location;
+  currentVisit.endLat = location.lat;
+  currentVisit.endLng = location.lng;
+
+  const log = {
+    date: getToday(),
+    number: currentVisit.number,
+    target: currentVisit.target,
+    startTime: currentVisit.startTime,
+    startLocation: currentVisit.startLocation,
+    startLat: currentVisit.startLat,
+    startLng: currentVisit.startLng,
+    endTime: currentVisit.endTime,
+    endLocation: currentVisit.endLocation,
+    endLat: currentVisit.endLat,
+    endLng: currentVisit.endLng,
+    attendee: currentVisit.person,
+    attendeeTitle: currentVisit.personTitle,
+    content: currentVisit.content,
+    notes: currentVisit.notes,
+    createdAt: new Date().toISOString()
+  };
+
+  meetingLogs.push(log);
+  saveLogs();
+
+  currentVisit = null;
+  goToReport();
+  showToast("訪問を記録しました");
+});
 
 
 /* =========================================================
@@ -1339,364 +936,158 @@ function recordVisit(){
 ========================================================= */
 
 function getTodayVehicle(){
-
-  const today =
-    getToday();
-
-
+  const today = getToday();
   if(!dailyVehicleInfo[today]){
-
     dailyVehicleInfo[today] = {
-
-      departure:{
-        time:"",
-        location:"",
-        distance:""
-      },
-
-      return:{
-        time:"",
-        location:"",
-        distance:"",
-        fuel:""
-      },
-
+      departure:{ time:"", location:"", lat:"", lng:"", distance:"" },
+      return:{ time:"", location:"", lat:"", lng:"", distance:"", fuel:"" },
       status:"before"
-
     };
-
   }
-
-
   return dailyVehicleInfo[today];
-
 }
 
-
-/* =========================================================
-   車両情報画面
-   初回表示時に現在時間・位置情報を自動記入
-========================================================= */
-
-async function openVehicleScreen(){
-
-  const vehicle =
-    getTodayVehicle();
-
-
-  if(!vehicle.departure.time){
-
-    vehicle.departure.time =
-      getNowDateTimeLocal();
-
-
-    const location =
-      await getLocation();
-
-
-    vehicle.departure.location =
-      location.location;
-
-
-    saveVehicle();
-
-  }
-
-
-  loadVehicleInputs();
-
-  showScreen("vehicle");
-
+function getLatestPastReturnDistance(excludeDate){
+  const dates = Object.keys(dailyVehicleInfo)
+    .filter(d => d !== excludeDate && dailyVehicleInfo[d].return && dailyVehicleInfo[d].return.distance !== "" && dailyVehicleInfo[d].return.distance != null)
+    .sort((a,b) => b.localeCompare(a));
+  if(dates.length === 0) return "";
+  return dailyVehicleInfo[dates[0]].return.distance;
 }
 
+function renderVehicleScreen(){
+  const vehicle = getTodayVehicle();
+  const today = getToday();
 
-/* =========================================================
-   車両入力値表示
-========================================================= */
+  // 出発
+  const departed = !!vehicle.departure.time;
 
-function loadVehicleInputs(){
-
-  const vehicle =
-    getTodayVehicle();
-
-
-  document.getElementById("departureDistance")
-    .value =
-      vehicle.departure.distance || "";
-
-  document.getElementById("departureTime")
-    .value =
-      vehicle.departure.time || "";
-
-  document.getElementById("departureLocation")
-    .value =
-      vehicle.departure.location || "";
-
-
-  document.getElementById("returnDistance")
-    .value =
-      vehicle.return.distance || "";
-
-  document.getElementById("returnTime")
-    .value =
-      vehicle.return.time || "";
-
-  document.getElementById("returnLocation")
-    .value =
-      vehicle.return.location || "";
-
-  document.getElementById("returnFuel")
-    .value =
-      vehicle.return.fuel || "";
-
-
-  updateVehicleStatus();
-
-}
-
-
-/* =========================================================
-   車両状態
-========================================================= */
-
-function updateVehicleStatus(){
-
-  const vehicle =
-    getTodayVehicle();
-
-
-  const status =
-    vehicle.status;
-
-
-  const text =
-    status === "returned"
-      ? "帰社済み"
-      : status === "departed"
-        ? "発車済み"
-        : "発車前";
-
-
-  document.getElementById("vehicleStatus")
-    .textContent = text;
-
-}
-
-
-/* =========================================================
-   発車
-========================================================= */
-
-document.getElementById("departureButton")
-.addEventListener("click", async () => {
-
-  const vehicle =
-    getTodayVehicle();
-
-
-  vehicle.departure.distance =
-    document.getElementById("departureDistance")
-    .value;
-
-  vehicle.departure.time =
-    document.getElementById("departureTime")
-    .value;
-
-  vehicle.departure.location =
-    document.getElementById("departureLocation")
-    .value;
-
-
-  if(!vehicle.departure.time){
-
-    vehicle.departure.time =
-      getNowDateTimeLocal();
-
+  if(!departed && !vehicle.departure.distance){
+    const prefill = getLatestPastReturnDistance(today);
+    if(prefill !== ""){
+      vehicle.departure.distance = prefill;
+    }
   }
 
+  document.getElementById("departureDistance").value = vehicle.departure.distance || "";
+  document.getElementById("departureDistance").disabled = departed;
+  document.getElementById("departureDial").classList.toggle("disabled", departed);
+  document.getElementById("departureDial").classList.toggle("disabled", departed);
+  document.getElementById("departureButton").style.display = departed ? "none" : "block";
+  document.getElementById("departureResetButton").style.display = departed ? "block" : "none";
+  document.getElementById("departureStatusPill").textContent = departed ? "出発済み" : "未出発";
+  document.getElementById("departureStatusPill").classList.toggle("on", departed);
+  document.getElementById("departureTimeText").textContent = formatTimeOnly(vehicle.departure.time);
 
-  if(!vehicle.departure.location){
+  // 帰社（未帰社の間は出発距離をそのまま初期値として表示）
+  const returned = !!vehicle.return.time;
 
-    const location =
-      await getLocation();
-
-    vehicle.departure.location =
-      location.location;
-
+  if(!returned && !vehicle.return.distance && vehicle.departure.distance){
+    vehicle.return.distance = vehicle.departure.distance;
   }
 
+  document.getElementById("returnDistance").value = vehicle.return.distance || "";
+  document.getElementById("returnDistance").disabled = returned;
+  document.getElementById("returnDial").classList.toggle("disabled", returned);
+  document.getElementById("returnDial").classList.toggle("disabled", returned);
 
-  vehicle.status =
-    "departed";
+  document.getElementById("returnFuel").value = vehicle.return.fuel || "";
+  document.getElementById("returnFuel").disabled = returned;
 
+  document.getElementById("returnButton").style.display = returned ? "none" : "block";
+  document.getElementById("returnButton").disabled = !departed;
+  document.getElementById("returnResetButton").style.display = returned ? "block" : "none";
+  document.getElementById("returnStatusPill").textContent = returned ? "帰社済み" : "未帰社";
+  document.getElementById("returnStatusPill").classList.toggle("on", returned);
+  document.getElementById("returnTimeText").textContent = formatTimeOnly(vehicle.return.time);
 
-  saveVehicle();
+  const summaryCard = document.getElementById("distanceSummaryCard");
+  const dDist = parseFloat(vehicle.departure.distance);
+  const rDist = parseFloat(vehicle.return.distance);
 
-  loadVehicleInputs();
-
-});
-
-
-/* =========================================================
-   帰社
-========================================================= */
-
-document.getElementById("returnButton")
-.addEventListener("click", async () => {
-
-  const vehicle =
-    getTodayVehicle();
-
-
-  vehicle.return.distance =
-    document.getElementById("returnDistance")
-    .value;
-
-  vehicle.return.time =
-    document.getElementById("returnTime")
-    .value;
-
-  vehicle.return.location =
-    document.getElementById("returnLocation")
-    .value;
-
-  vehicle.return.fuel =
-    document.getElementById("returnFuel")
-    .value;
-
-
-  if(!vehicle.return.time){
-
-    vehicle.return.time =
-      getNowDateTimeLocal();
-
-  }
-
-
-  if(!vehicle.return.location){
-
-    const location =
-      await getLocation();
-
-    vehicle.return.location =
-      location.location;
-
-  }
-
-
-  vehicle.status =
-    "returned";
-
-
-  saveVehicle();
-
-  loadVehicleInputs();
-
-});
-
-
-/* =========================================================
-   車両入力欄の変更を自動保存
-========================================================= */
-
-[
-  "departureDistance",
-  "departureTime",
-  "departureLocation",
-  "returnDistance",
-  "returnTime",
-  "returnLocation",
-  "returnFuel"
-
-].forEach(id => {
-
-  document.getElementById(id)
-    .addEventListener("change", () => {
-
-      const vehicle =
-        getTodayVehicle();
-
-
-      vehicle.departure.distance =
-        document.getElementById("departureDistance")
-        .value;
-
-      vehicle.departure.time =
-        document.getElementById("departureTime")
-        .value;
-
-      vehicle.departure.location =
-        document.getElementById("departureLocation")
-        .value;
-
-
-      vehicle.return.distance =
-        document.getElementById("returnDistance")
-        .value;
-
-      vehicle.return.time =
-        document.getElementById("returnTime")
-        .value;
-
-      vehicle.return.location =
-        document.getElementById("returnLocation")
-        .value;
-
-      vehicle.return.fuel =
-        document.getElementById("returnFuel")
-        .value;
-
-
-      saveVehicle();
-
-    });
-
-});
-
-
-/* =========================================================
-   ヘッダー動的ボタン
-========================================================= */
-
-document.getElementById("vehicleToggleButton")
-.addEventListener("click", async () => {
-
-  const vehicleScreen =
-    document.getElementById("vehicleScreen");
-
-
-  const isVehicle =
-    vehicleScreen.classList.contains("active");
-
-
-  if(isVehicle){
-
-    /*
-      車両情報表示中
-      → 営業日報へ戻る
-    */
-
-    document.getElementById("vehicleToggleButton")
-      .textContent = "車両情報";
-
-
-    showScreen("report");
-
+  if(!isNaN(dDist) && !isNaN(rDist) && rDist >= dDist){
+    summaryCard.style.display = "block";
+    document.getElementById("distanceSummaryText").textContent = `${(rDist - dDist).toLocaleString()} km`;
   }else{
-
-    /*
-      営業日報表示中
-      → 車両情報を表示
-    */
-
-    document.getElementById("vehicleToggleButton")
-      .textContent = "営業日報";
-
-
-    await openVehicleScreen();
-
+    summaryCard.style.display = "none";
   }
 
+  saveVehicle();
+}
+
+document.getElementById("departureDistance").addEventListener("change", () => {
+  const vehicle = getTodayVehicle();
+  vehicle.departure.distance = document.getElementById("departureDistance").value;
+  saveVehicle();
+});
+
+document.getElementById("returnDistance").addEventListener("change", () => {
+  const vehicle = getTodayVehicle();
+  vehicle.return.distance = document.getElementById("returnDistance").value;
+  saveVehicle();
+});
+
+document.getElementById("returnFuel").addEventListener("change", () => {
+  const vehicle = getTodayVehicle();
+  vehicle.return.fuel = document.getElementById("returnFuel").value;
+  saveVehicle();
+});
+
+document.getElementById("departureButton").addEventListener("click", async () => {
+  const vehicle = getTodayVehicle();
+  vehicle.departure.distance = document.getElementById("departureDistance").value;
+  vehicle.departure.time = getNowDateTimeLocal();
+
+  const location = await getLocation();
+  vehicle.departure.location = location.location;
+  vehicle.departure.lat = location.lat;
+  vehicle.departure.lng = location.lng;
+
+  vehicle.status = "departed";
+  saveVehicle();
+  goToReport();
+  showToast("出発を記録しました");
+});
+
+document.getElementById("returnButton").addEventListener("click", async () => {
+  const vehicle = getTodayVehicle();
+  vehicle.return.distance = document.getElementById("returnDistance").value;
+  vehicle.return.fuel = document.getElementById("returnFuel").value;
+  vehicle.return.time = getNowDateTimeLocal();
+
+  const location = await getLocation();
+  vehicle.return.location = location.location;
+  vehicle.return.lat = location.lat;
+  vehicle.return.lng = location.lng;
+
+  vehicle.status = "returned";
+  saveVehicle();
+  goToReport();
+  showToast("帰社を記録しました");
+});
+
+document.getElementById("departureResetButton").addEventListener("click", () => {
+  if(!window.confirm("出発の記録をやり直しますか？")) return;
+  const vehicle = getTodayVehicle();
+  vehicle.departure.time = "";
+  vehicle.departure.location = "";
+  vehicle.departure.lat = "";
+  vehicle.departure.lng = "";
+  vehicle.status = "before";
+  saveVehicle();
+  renderVehicleScreen();
+});
+
+document.getElementById("returnResetButton").addEventListener("click", () => {
+  if(!window.confirm("帰社の記録をやり直しますか？")) return;
+  const vehicle = getTodayVehicle();
+  vehicle.return.time = "";
+  vehicle.return.location = "";
+  vehicle.return.lat = "";
+  vehicle.return.lng = "";
+  vehicle.status = vehicle.departure.time ? "departed" : "before";
+  saveVehicle();
+  renderVehicleScreen();
 });
 
 
@@ -1704,93 +1095,37 @@ document.getElementById("vehicleToggleButton")
    メール送信
 ========================================================= */
 
-document.getElementById("mailButton")
-.addEventListener("click", () => {
+document.getElementById("mailButton").addEventListener("click", () => {
+  const today = getToday();
+  const logs = meetingLogs
+    .filter(x => x.date === today)
+    .sort((a,b) => (a.startTime || "").localeCompare(b.startTime || ""));
 
-  const today =
-    getToday();
-
-
-  const logs =
-    meetingLogs
-      .filter(x => x.date === today)
-      .sort((a,b) => a.number - b.number);
-
-
-  const vehicle =
-    getTodayVehicle();
-
+  const vehicle = getTodayVehicle();
 
   let body = "";
-
-
   body += `営業日報\n`;
   body += `日付：${today}\n\n`;
 
-
-  /* 車両情報 */
-
   body += `【車両情報】\n`;
+  body += `出発時 走行距離：${vehicle.departure.distance || ""}\n`;
+  body += `出発時刻：${formatTimeOnly(vehicle.departure.time)}\n`;
+  body += `帰社時 走行距離：${vehicle.return.distance || ""}\n`;
+  body += `帰社時刻：${formatTimeOnly(vehicle.return.time)}\n`;
+  body += `給油量：${vehicle.return.fuel || ""}\n\n`;
 
-  body +=
-    `発車時 走行距離：${vehicle.departure.distance || ""}\n`;
-
-  body +=
-    `発車時 時間：${vehicle.departure.time || ""}\n`;
-
-  body +=
-    `発車時 位置：${vehicle.departure.location || ""}\n`;
-
-  body +=
-    `帰社時 走行距離：${vehicle.return.distance || ""}\n`;
-
-  body +=
-    `帰社時 時間：${vehicle.return.time || ""}\n`;
-
-  body +=
-    `帰社時 位置：${vehicle.return.location || ""}\n`;
-
-  body +=
-    `給油量：${vehicle.return.fuel || ""}\n\n`;
-
-
-  /* 訪問 */
-
-  logs.forEach(log => {
-
-    body +=
-      `【訪問先 ${log.number}】\n`;
-
-    body +=
-      `訪問先：${log.target || ""}\n`;
-
-    body +=
-      `時間：${log.startTime || ""} ～ ${log.endTime || ""}\n`;
-
-    body +=
-      `面談者：${log.attendee || ""}${log.attendeeTitle || ""}\n`;
-
-    body +=
-      `内容区分：${log.contentType || ""}\n`;
-
-    body +=
-      `内容：${log.content || ""}\n\n`;
-
+  logs.forEach((log, i) => {
+    body += `【訪問先 ${log.number || (i + 1)}】\n`;
+    body += `訪問先：${log.target || ""}\n`;
+    body += `時間：${formatTimeOnly(log.startTime)} ～ ${formatTimeOnly(log.endTime)}\n`;
+    body += `面談者：${log.attendee || ""}${log.attendeeTitle || ""}\n`;
+    body += `内容：${log.content || ""}\n`;
+    body += `特記事項：${log.notes || ""}\n\n`;
   });
 
-
-  const subject =
-    `営業日報 ${today}`;
-
-
-  const mailto =
-    `mailto:?subject=${encodeURIComponent(subject)}` +
-    `&body=${encodeURIComponent(body)}`;
-
-
-  window.location.href =
-    mailto;
-
+  const subject = `営業日報 ${today}`;
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
 });
 
 
@@ -1798,97 +1133,38 @@ document.getElementById("mailButton")
    全データ削除
 ========================================================= */
 
-document.getElementById("deleteAllButton")
-.addEventListener("click", () => {
-
-  const confirmed =
-    window.confirm(
-      "保存されている営業日報と車両情報をすべて削除します。\n\nこの操作は元に戻せません。\n\n削除しますか？"
-    );
-
-
-  if(!confirmed){
-
-    return;
-
-  }
-
-
-  /*
-    保存データを完全削除
-  */
+document.getElementById("deleteAllButton").addEventListener("click", () => {
+  if(!window.confirm("保存されている営業日報と車両情報をすべて削除します。\n\nこの操作は元に戻せません。\n\n削除しますか？")) return;
 
   localStorage.removeItem(LOG_KEY);
-
   localStorage.removeItem(VEHICLE_KEY);
 
-
-  /*
-    メモリ上のデータも初期化
-  */
-
   meetingLogs = [];
-
   dailyVehicleInfo = {};
+  currentVisit = null;
 
-
-  currentVisit = {
-
-    number:1,
-
-    target:"",
-
-    startTime:"",
-    startLocation:"",
-    startLat:"",
-    startLng:"",
-
-    endTime:"",
-    endLocation:"",
-    endLat:"",
-    endLng:"",
-
-    person:"",
-    personTitle:"",
-
-    contentType:"",
-    content:""
-
-  };
-
-
-  /*
-    画面を初期状態に戻す
-  */
-
-  document.getElementById("visitTarget")
-    .value = "";
-
-
-  updateVisitNumber();
-
-
-  document.getElementById("vehicleToggleButton")
-    .textContent = "車両情報";
-
-
-  showScreen("report");
-
-
-  alert("全データを削除しました。");
-
+  goToReport();
+  showToast("全データを削除しました");
 });
 
 
 /* =========================================================
    初期化
+   1日で最初に開いたときは「車両」、2回目以降は「ホーム」を表示
 ========================================================= */
 
 updateDate();
 
-updateVisitNumber();
+const today = getToday();
+const lastOpen = localStorage.getItem(LAST_OPEN_KEY);
+
+if(lastOpen !== today){
+  localStorage.setItem(LAST_OPEN_KEY, today);
+  goToVehicle();
+}else{
+  goToReport();
+}
 
 </script>
-
 </body>
 </html>
