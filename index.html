@@ -228,8 +228,6 @@
     <h2 class="section-title" id="startTitle">訪問開始</h2>
     <label for="destInput">訪問先名称</label>
     <input type="text" id="destInput" placeholder="例：株式会社ABC" autocomplete="off">
-    <label for="contactInput">打合せ者名</label>
-    <input type="text" id="contactInput" placeholder="例：山田太郎" autocomplete="off">
     <label for="startTimeInput">開始時間</label>
     <input type="text" id="startTimeInput" placeholder="09:32">
     <label>位置情報</label>
@@ -242,6 +240,8 @@
   <section id="view-end" class="view">
     <h2 class="section-title">訪問終了</h2>
     <div id="endTicket"></div>
+    <label for="contactInput">打合せ者名</label>
+    <input type="text" id="contactInput" placeholder="例：山田太郎" autocomplete="off">
     <label for="contentInput">打合せ内容</label>
     <textarea id="contentInput" placeholder="例：使用状況を確認。来月の使用量を確認。"></textarea>
     <button class="btn btn-ghost" onclick="goHome()">キャンセル</button>
@@ -396,11 +396,26 @@ function saveWorking(obj){ localStorage.setItem(WORK_KEY, JSON.stringify(obj)); 
 function clearWorking(){ localStorage.removeItem(WORK_KEY); }
 
 /* ---- mileage / fuel ---- */
-function loadMileage(){
+function loadMileageList(){
   const raw = localStorage.getItem(MILE_KEY);
-  return raw ? JSON.parse(raw) : null;
+  if(!raw) return [];
+  const parsed = JSON.parse(raw);
+  // migrate old single-object format
+  if(!Array.isArray(parsed)) return [parsed];
+  return parsed;
 }
-function saveMileage(obj){ localStorage.setItem(MILE_KEY, JSON.stringify(obj)); }
+function saveMileageList(arr){ localStorage.setItem(MILE_KEY, JSON.stringify(arr)); }
+// returns today's record only; past days are left untouched (end stays blank if forgotten)
+function loadMileage(){
+  const list = loadMileageList();
+  return list.find(m => m.date === todayStr()) || null;
+}
+function saveMileage(obj){
+  const list = loadMileageList();
+  const i = list.findIndex(m => m.date === obj.date);
+  if(i >= 0){ list[i] = obj; } else { list.push(obj); }
+  saveMileageList(list);
+}
 
 /* ---- visits (completed records) ---- */
 function loadVisits(){
@@ -463,27 +478,41 @@ function refreshBadge(){
 }
 
 /* ---- shared mileage card (used on home + log) ---- */
-function mileageCardHtml(){
-  const m = loadMileage();
-  if(!m){
-    return '<div class="empty-note">本日の走行距離・給油記録はまだありません。</div>';
-  }
+function mileageRecordHtml(m, isToday){
   let html = '<div class="ticket">';
-  html += `<div class="label">対象日</div><div class="value">${m.date}</div>`;
+  html += `<div class="label">対象日</div><div class="value">${m.date}${isToday ? '（本日）' : ''}</div>`;
   html += `<div class="label">出発時走行距離</div><div class="value">${m.start!=null ? m.start+' km' : '—'}</div>`;
   if(m.startFuel!=null){
     html += `<div class="label">出発時給油量</div><div class="value">${m.startFuel} L</div>`;
   }
-  html += `<div class="label">帰社時走行距離</div><div class="value">${m.end!=null ? m.end+' km' : '—'}</div>`;
+  html += `<div class="label">帰社時走行距離</div><div class="value">${m.end!=null ? m.end+' km' : '（未記録）'}</div>`;
   if(m.endFuel!=null){
     html += `<div class="label">帰社時給油量</div><div class="value">${m.endFuel} L</div>`;
   }
-  html += `<div class="row-actions">
+  if(isToday){
+    html += `<div class="row-actions">
       <button class="btn btn-ghost btn-sm" onclick="openMileageStart(false)">出発時を編集</button>
       <button class="btn btn-ghost btn-sm" onclick="openMileageEnd()">帰社時を編集</button>
     </div>`;
+  }
   html += '</div>';
   return html;
+}
+
+function mileageCardHtml(){
+  const today = loadMileage();
+  if(!today){
+    return '<div class="empty-note">本日の走行距離・給油記録はまだありません。</div>';
+  }
+  return mileageRecordHtml(today, true);
+}
+
+function allMileageCardsHtml(){
+  const list = loadMileageList().slice().sort((a,b)=> a.date < b.date ? 1 : -1);
+  if(list.length === 0){
+    return '<div class="empty-note">走行距離・給油記録はまだありません。</div>';
+  }
+  return list.map(m => mileageRecordHtml(m, m.date === todayStr())).join('');
 }
 
 function renderHomeTicket(){
@@ -497,8 +526,6 @@ function renderHomeTicket(){
       <div class="ticket">
         <div class="label">訪問先</div>
         <div class="value">${w.dest}</div>
-        <div class="label">打合せ者</div>
-        <div class="value">${w.contact}</div>
         <div class="label">開始</div>
         <div class="value">${w.date} ${w.time}</div>
         <div class="row-actions">
@@ -584,7 +611,6 @@ function openStart(){
   }
   document.getElementById('startTitle').textContent = '訪問開始';
   document.getElementById('destInput').value = '';
-  document.getElementById('contactInput').value = '';
   document.getElementById('startTimeInput').value = nowParts().time;
   resetLocationUI();
   document.body.classList.add('in-progress');
@@ -597,7 +623,6 @@ function proceedNewVisit(){
   isEditingWorking = false;
   document.getElementById('startTitle').textContent = '訪問開始';
   document.getElementById('destInput').value = '';
-  document.getElementById('contactInput').value = '';
   document.getElementById('startTimeInput').value = nowParts().time;
   resetLocationUI();
   document.body.classList.add('in-progress');
@@ -610,7 +635,6 @@ function editWorking(){
   isEditingWorking = true;
   document.getElementById('startTitle').textContent = '訪問中データを編集';
   document.getElementById('destInput').value = w.dest;
-  document.getElementById('contactInput').value = w.contact;
   document.getElementById('startTimeInput').value = w.time;
   setLocationUI(w.lat!=null ? w.lat : null, w.lng!=null ? w.lng : null);
   if(w.lat==null){ document.getElementById('locStatus').textContent = '未取得'; }
@@ -622,7 +646,6 @@ function cancelStart(){
 }
 function submitStart(){
   const dest = sanitize(document.getElementById('destInput').value);
-  const contact = sanitize(document.getElementById('contactInput').value);
   const time = sanitize(document.getElementById('startTimeInput').value) || nowParts().time;
   if(!dest){ alert('訪問先名称を入力してください。'); return; }
   let date = nowParts().date;
@@ -630,7 +653,7 @@ function submitStart(){
     const w = loadWorking();
     if(w) date = w.date;
   }
-  saveWorking({date, time, dest, contact, lat: capturedLat, lng: capturedLng});
+  saveWorking({date, time, dest, lat: capturedLat, lng: capturedLng});
   isEditingWorking = false;
   goHome();
 }
@@ -646,20 +669,20 @@ function openEnd(){
     <div class="ticket">
       <div class="label">訪問先</div>
       <div class="value">${w.dest}</div>
-      <div class="label">打合せ者</div>
-      <div class="value">${w.contact}</div>
       <div class="label">開始</div>
       <div class="value">${w.date} ${w.time}</div>
     </div>`;
+  document.getElementById('contactInput').value = '';
   document.getElementById('contentInput').value = '';
   setView('view-end');
 }
 function submitEnd(){
   const w = loadWorking();
   if(!w){ goHome(); return; }
+  const contact = sanitize(document.getElementById('contactInput').value);
   const content = sanitize(document.getElementById('contentInput').value);
   const {time: endTime} = nowParts();
-  addVisit({date: w.date, startTime: w.time, endTime, dest: w.dest, contact: w.contact, content, lat: w.lat!=null ? w.lat : '', lng: w.lng!=null ? w.lng : ''});
+  addVisit({date: w.date, startTime: w.time, endTime, dest: w.dest, contact, content, lat: w.lat!=null ? w.lat : '', lng: w.lng!=null ? w.lng : ''});
   clearWorking();
   goHome();
 }
@@ -729,19 +752,20 @@ function deleteVisit(i){
 
 /* ---- log / mail / export ---- */
 function mileageTextBlock(){
-  const m = loadMileage();
-  if(!m) return '';
-  const startKm = m.start!=null ? m.start+'km' : '未入力';
-  const endKm = m.end!=null ? m.end+'km' : '未入力';
-  const startFuel = m.startFuel!=null ? m.startFuel+'L' : '未入力';
-  const endFuel = m.endFuel!=null ? m.endFuel+'L' : '未入力';
-  return `走行距離・給油記録,${m.date}\n出発時走行距離,${startKm}\n出発時給油量,${startFuel}\n帰社時走行距離,${endKm}\n帰社時給油量,${endFuel}\n\n`;
+  const list = loadMileageList().slice().sort((a,b)=> a.date < b.date ? 1 : -1);
+  if(list.length === 0) return '';
+  const header = '走行距離・給油記録\n日付,出発時走行距離,出発時給油量,帰社時走行距離,帰社時給油量\n';
+  const rows = list.map(m => {
+    const v = x => (x!=null ? x : '');
+    return `${m.date},${v(m.start)},${v(m.startFuel)},${v(m.end)},${v(m.endFuel)}`;
+  }).join('\n');
+  return header + rows + '\n\n';
 }
 function fullReportText(){
   return mileageTextBlock() + visitsToCsv(loadVisits());
 }
 function openLog(){
-  document.getElementById('logMileageBlock').innerHTML = mileageCardHtml();
+  document.getElementById('logMileageBlock').innerHTML = allMileageCardsHtml();
   renderVisitList();
   setView('view-log');
 }
@@ -758,7 +782,7 @@ function copyLog(){
   navigator.clipboard.writeText(text).then(()=>alert('コピーしました。'));
 }
 function clearLogConfirm(){
-  if(loadVisits().length === 0 && !loadMileage()){ alert('消去するデータがありません。'); return; }
+  if(loadVisits().length === 0 && loadMileageList().length === 0){ alert('消去するデータがありません。'); return; }
   if(confirm('日報の記録と走行距離・給油記録を消去します。PC側で受信・取り込みが完了してから実行してください。よろしいですか？')){
     localStorage.removeItem(VISITS_KEY);
     localStorage.removeItem(MILE_KEY);
