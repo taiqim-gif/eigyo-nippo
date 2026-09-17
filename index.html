@@ -107,6 +107,35 @@
 
   .field{ margin-bottom:14px; }
   .field:last-child{ margin-bottom:0; }
+  .honorific-dropdown{
+    display:none;
+    position:absolute;
+    top:100%; left:0; right:0;
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    margin-top:4px;
+    z-index:20;
+    box-shadow:0 4px 14px rgba(0,0,0,0.10);
+    overflow:hidden;
+  }
+  .honorific-dropdown.show{ display:block; }
+  .honorific-option{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:10px 12px;
+    border:none;
+    border-bottom:1px solid var(--line);
+    background:#fff;
+    font-family:inherit;
+    font-size:14px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .honorific-option:last-child{ border-bottom:none; }
+  .honorific-option:active{ background:var(--butter); }
+
   .field label{ display:block; font-size:12px; color:var(--ink-soft); margin-bottom:6px; }
 
   input[type=text], input[type=number], select, textarea{
@@ -348,17 +377,10 @@
           <label for="meetingPerson">面談者</label>
           <input type="text" id="meetingPerson" placeholder="例：山田">
         </div>
-        <div class="field" style="flex:1;">
+        <div class="field" style="flex:1; position:relative;">
           <label for="meetingPersonTitle">敬称</label>
-          <input type="text" id="meetingPersonTitle" list="honorificList" placeholder="さん">
-          <datalist id="honorificList">
-            <option value="社長">
-            <option value="工場長">
-            <option value="専務">
-            <option value="常務">
-            <option value="部長">
-            <option value="課長">
-          </datalist>
+          <input type="text" id="meetingPersonTitle" placeholder="さん" autocomplete="off">
+          <div class="honorific-dropdown" id="honorificDropdown"></div>
         </div>
       </div>
 
@@ -469,6 +491,7 @@ const VEHICLE_KEY = "dailyVehicleInfo";
 const LAST_OPEN_KEY = "appLastOpenDate";
 
 const CONTENT_TYPES = ["営業","配達","新規営業","集金","保安","苦情"];
+const HONORIFIC_OPTIONS = ["社長","工場長","専務","常務","部長","課長"];
 
 let meetingLogs = JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
 let dailyVehicleInfo = JSON.parse(localStorage.getItem(VEHICLE_KEY) || "{}");
@@ -784,6 +807,38 @@ function renderContentTypeButtons(){
     container.appendChild(btn);
   });
 }
+
+
+/* =========================================================
+   敬称：タップで選べるドロップダウン（自由入力も可）
+========================================================= */
+
+function initHonorificDropdown(){
+  const input = document.getElementById("meetingPersonTitle");
+  const dropdown = document.getElementById("honorificDropdown");
+
+  HONORIFIC_OPTIONS.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "honorific-option";
+    btn.textContent = opt;
+    // mousedown/touchstartでpreventDefaultし、inputのblurより先に選択を確定させる
+    btn.addEventListener("mousedown", (e) => e.preventDefault());
+    btn.addEventListener("click", () => {
+      input.value = opt;
+      dropdown.classList.remove("show");
+    });
+    dropdown.appendChild(btn);
+  });
+
+  input.addEventListener("focus", () => dropdown.classList.add("show"));
+  input.addEventListener("click", () => dropdown.classList.add("show"));
+  input.addEventListener("blur", () => {
+    setTimeout(() => dropdown.classList.remove("show"), 150);
+  });
+}
+
+initHonorificDropdown();
 
 
 /* =========================================================
