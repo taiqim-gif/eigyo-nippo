@@ -417,7 +417,10 @@
         <textarea id="meetingNotes" placeholder="特になければ空欄でOK"></textarea>
       </div>
 
-      <button class="btn btn-mint" id="endButton">記録終了</button>
+      <div class="row-gap">
+        <button class="btn btn-mint" id="endButton">記録終了</button>
+        <button class="btn btn-outline-pink" id="deleteEditButton" style="display:none;">削除</button>
+      </div>
     </div>
 
   </section>
@@ -908,6 +911,7 @@ document.getElementById("homeStartButton").addEventListener("click", async () =>
   document.getElementById("meetingContent").value = "";
   document.getElementById("meetingNotes").value = "";
   document.getElementById("endButton").textContent = "記録終了";
+  document.getElementById("deleteEditButton").style.display = "none";
   renderContentTypeButtons();
 
   goToVisit();
@@ -940,11 +944,24 @@ function openEditVisit(id){
   document.getElementById("meetingPersonTitle").value = log.attendeeTitle || "さん";
   document.getElementById("meetingContent").value = log.content || "";
   document.getElementById("meetingNotes").value = log.notes || "";
-  document.getElementById("endButton").textContent = "保存する";
+  document.getElementById("endButton").textContent = "保存";
+  document.getElementById("deleteEditButton").style.display = "block";
   renderContentTypeButtons();
 
   goToVisit();
 }
+
+document.getElementById("deleteEditButton").addEventListener("click", () => {
+  if(!currentVisit || !currentVisit.isEdit) return;
+  if(!window.confirm("この訪問記録を削除しますか？")) return;
+
+  meetingLogs = meetingLogs.filter(x => x.createdAt !== currentVisit.editId);
+  saveLogs();
+
+  currentVisit = null;
+  goToReport();
+  showToast("削除しました");
+});
 
 
 /* =========================================================
