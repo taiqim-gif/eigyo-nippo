@@ -138,7 +138,7 @@
 
   .field label{ display:block; font-size:12px; color:var(--ink-soft); margin-bottom:6px; }
 
-  input[type=text], input[type=number], select, textarea{
+  input[type=text], input[type=number], input[type=time], select, textarea{
     width:100%;
     border:1.5px solid var(--line);
     border-radius:10px;
@@ -253,13 +253,15 @@
   }
   .status-pill.on{ background:#E4F1EC; color:var(--mint-ink); }
 
-  .chip-group{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip-group{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
   .chip{
-    padding:9px 14px;
+    padding:10px 2px;
+    text-align:center;
+    white-space:nowrap;
     border-radius:999px;
     border:1.5px solid var(--line);
     background:#fff;
-    font-size:13.5px;
+    font-size:13px;
     font-family:inherit;
     color:var(--ink-soft);
     cursor:pointer;
@@ -344,6 +346,11 @@
 
     <div class="footer-actions">
       <button class="btn btn-outline-mint" id="mailButton">日報をメール送信</button>
+      <div class="row-gap">
+        <button class="btn btn-outline-mint" id="backupButton">バックアップ保存</button>
+        <button class="btn btn-outline-mint" id="restoreButton">バックアップ復元</button>
+      </div>
+      <input type="file" id="restoreFile" accept="application/json,.json" style="display:none;">
       <button class="btn btn-outline-pink" id="deleteAllButton">全データを削除</button>
     </div>
 
@@ -362,6 +369,17 @@
       <div class="field">
         <label for="visitTarget">訪問先名</label>
         <input type="text" id="visitTarget" placeholder="例：〇〇商店">
+      </div>
+
+      <div class="row-gap" id="editTimeRow" style="display:none;">
+        <div class="field">
+          <label for="editStartTime">開始時刻</label>
+          <input type="time" id="editStartTime">
+        </div>
+        <div class="field">
+          <label for="editEndTime">終了時刻</label>
+          <input type="time" id="editEndTime">
+        </div>
       </div>
 
       <div class="field" id="visitStatusField" style="display:none;">
@@ -385,7 +403,7 @@
       </div>
 
       <div class="field">
-        <label>内容区分（押すと下の内容欄に転記されます・何度でも押せます）</label>
+        <label>内容区分</label>
         <div class="chip-group" id="contentTypeButtons"></div>
       </div>
 
@@ -490,7 +508,7 @@ const LOG_KEY = "meetingLogs";
 const VEHICLE_KEY = "dailyVehicleInfo";
 const LAST_OPEN_KEY = "appLastOpenDate";
 
-const CONTENT_TYPES = ["営業","配達","新規営業","集金","保安","苦情"];
+const CONTENT_TYPES = ["引取","配達","注文","営業","周知文書","集金","苦情","新規"];
 const HONORIFIC_OPTIONS = ["社長","工場長","専務","常務","部長","課長"];
 
 let meetingLogs = JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
@@ -881,6 +899,7 @@ document.getElementById("homeStartButton").addEventListener("click", async () =>
   document.getElementById("visitTarget").value = target;
   document.getElementById("visitTarget").disabled = true;
   document.getElementById("visitStatusField").style.display = "block";
+  document.getElementById("editTimeRow").style.display = "none";
   document.getElementById("visitStartedAt").textContent = formatTimeOnly(startTime) + " 開始";
   document.getElementById("meetingCard").style.display = "block";
 
@@ -912,6 +931,9 @@ function openEditVisit(id){
   document.getElementById("visitTarget").value = log.target || "";
   document.getElementById("visitTarget").disabled = false;
   document.getElementById("visitStatusField").style.display = "none";
+  document.getElementById("editTimeRow").style.display = "flex";
+  document.getElementById("editStartTime").value = formatTimeOnly(log.startTime);
+  document.getElementById("editEndTime").value = formatTimeOnly(log.endTime);
   document.getElementById("meetingCard").style.display = "block";
 
   document.getElementById("meetingPerson").value = log.attendee || "";
@@ -939,6 +961,14 @@ document.getElementById("endButton").addEventListener("click", async () => {
       log.attendeeTitle = document.getElementById("meetingPersonTitle").value.trim();
       log.content = document.getElementById("meetingContent").value;
       log.notes = document.getElementById("meetingNotes").value;
+
+      // 時刻の編集（日付部分は元の記録のものを維持）
+      const st = document.getElementById("editStartTime").value;
+      const et = document.getElementById("editEndTime").value;
+      const datePart = (log.startTime || "").split("T")[0] || log.date;
+      if(st) log.startTime = `${datePart}T${st}`;
+      if(et) log.endTime = `${datePart}T${et}`;
+
       saveLogs();
     }
     currentVisit = null;
@@ -1182,6 +1212,57 @@ document.getElementById("mailButton").addEventListener("click", () => {
   const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = mailto;
 });
+
+
+/* =========================================================
+   バックアップ保存／復元（端末内データをファイルに退避）
+========================================================= */
+
+document.getElementById("backupButton").addEventListener("click", () => {
+  const data = { version:1, exportedAt:new Date().toISOString(), meetingLogs, dailyVehicleInfo };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `営業日報バックアップ_${getToday()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast("バックアップを保存しました");
+});
+
+document.getElementById("restoreButton").addEventListener("click", () => {
+  document.getElementById("restoreFile").click();
+});
+
+document.getElementById("restoreFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+
+  try{
+    const data = JSON.parse(await file.text());
+    if(!Array.isArray(data.meetingLogs) || typeof data.dailyVehicleInfo !== "object"){
+      throw new Error("format");
+    }
+    if(!window.confirm("現在のデータをバックアップの内容に置き換えます。よろしいですか？")) return;
+
+    meetingLogs = data.meetingLogs;
+    dailyVehicleInfo = data.dailyVehicleInfo;
+    saveLogs();
+    saveVehicle();
+    goToReport();
+    showToast("復元しました");
+  }catch(err){
+    window.alert("バックアップファイルを読み込めませんでした。");
+  }
+});
+
+// ブラウザによる自動削除を受けにくくするよう保存領域の永続化を要求
+if(navigator.storage && navigator.storage.persist){
+  navigator.storage.persist().catch(() => {});
+}
 
 
 /* =========================================================
