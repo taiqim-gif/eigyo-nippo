@@ -179,6 +179,7 @@
 
   .btn-outline-mint{ background:#fff; color:var(--mint-ink); border:1.5px solid var(--mint); }
   .btn-outline-pink{ background:#fff; color:var(--pink-ink); border:1.5px solid var(--pink); }
+  .btn-compact{ flex:1; padding:10px 4px; font-size:12.5px; }
 
   .btn-text{
     background:none; border:none;
@@ -383,8 +384,11 @@
       </div>
 
       <div class="field" id="visitStatusField" style="display:none;">
-        <span class="status-pill on">訪問中</span>
-        <span style="font-size:12px;color:var(--ink-soft);margin-left:8px;" id="visitStartedAt"></span>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span class="status-pill on">訪問中</span>
+        </div>
+        <label for="visitStartTimeInput">開始時刻</label>
+        <input type="time" id="visitStartTimeInput">
       </div>
     </div>
 
@@ -418,8 +422,8 @@
       </div>
 
       <div class="row-gap">
-        <button class="btn btn-mint" id="endButton">記録終了</button>
-        <button class="btn btn-outline-pink" id="deleteEditButton" style="display:none;">削除</button>
+        <button class="btn btn-mint" id="endButton" style="flex:4;">記録終了</button>
+        <button class="btn btn-outline-pink btn-compact" id="deleteEditButton">削除</button>
       </div>
     </div>
 
@@ -903,7 +907,7 @@ document.getElementById("homeStartButton").addEventListener("click", async () =>
   document.getElementById("visitTarget").disabled = true;
   document.getElementById("visitStatusField").style.display = "block";
   document.getElementById("editTimeRow").style.display = "none";
-  document.getElementById("visitStartedAt").textContent = formatTimeOnly(startTime) + " 開始";
+  document.getElementById("visitStartTimeInput").value = formatTimeOnly(startTime);
   document.getElementById("meetingCard").style.display = "block";
 
   document.getElementById("meetingPerson").value = "";
@@ -911,11 +915,18 @@ document.getElementById("homeStartButton").addEventListener("click", async () =>
   document.getElementById("meetingContent").value = "";
   document.getElementById("meetingNotes").value = "";
   document.getElementById("endButton").textContent = "記録終了";
-  document.getElementById("deleteEditButton").style.display = "none";
   renderContentTypeButtons();
 
   goToVisit();
   showToast("訪問を開始しました");
+});
+
+document.getElementById("visitStartTimeInput").addEventListener("change", () => {
+  if(!currentVisit || currentVisit.isEdit) return;
+  const val = document.getElementById("visitStartTimeInput").value;
+  if(!val) return;
+  const datePart = (currentVisit.startTime || "").split("T")[0] || getToday();
+  currentVisit.startTime = `${datePart}T${val}`;
 });
 
 
@@ -945,18 +956,22 @@ function openEditVisit(id){
   document.getElementById("meetingContent").value = log.content || "";
   document.getElementById("meetingNotes").value = log.notes || "";
   document.getElementById("endButton").textContent = "保存";
-  document.getElementById("deleteEditButton").style.display = "block";
   renderContentTypeButtons();
 
   goToVisit();
 }
 
 document.getElementById("deleteEditButton").addEventListener("click", () => {
-  if(!currentVisit || !currentVisit.isEdit) return;
-  if(!window.confirm("この訪問記録を削除しますか？")) return;
+  if(!currentVisit) return;
 
-  meetingLogs = meetingLogs.filter(x => x.createdAt !== currentVisit.editId);
-  saveLogs();
+  if(currentVisit.isEdit){
+    if(!window.confirm("この訪問記録を削除しますか？")) return;
+    meetingLogs = meetingLogs.filter(x => x.createdAt !== currentVisit.editId);
+    saveLogs();
+  }else{
+    if(!window.confirm("入力中の訪問を削除します。よろしいですか？")) return;
+    // 新規入力中はまだ保存されていないため、そのまま破棄する
+  }
 
   currentVisit = null;
   goToReport();
