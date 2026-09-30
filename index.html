@@ -181,6 +181,8 @@
 
   .btn-outline-mint{ background:#fff; color:var(--mint-ink); border:1.5px solid var(--mint); }
   .btn-outline-pink{ background:#fff; color:var(--pink-ink); border:1.5px solid var(--pink); }
+  .btn-pink{ background:var(--pink); color:var(--pink-ink); border:1.5px solid var(--pink); }
+  .delete-row .btn{ font-size:13.5px; padding:13px 6px; }
   .btn-compact{ flex:1; padding:10px 4px; font-size:12.5px; }
 
   .btn-text{
@@ -392,7 +394,10 @@
 
     <div class="footer-actions">
       <button class="btn btn-outline-mint" id="mailButton">日報をメール送信</button>
-      <button class="btn btn-outline-pink" id="deleteAllButton">全データを削除</button>
+      <div class="row-gap delete-row">
+        <button class="btn btn-pink" id="deleteAllButton">全データを削除</button>
+        <button class="btn btn-outline-pink" id="deleteKeepTodoButton">TODOを残して削除</button>
+      </div>
     </div>
 
     <div class="todo-list-target" data-hide-empty="1"></div>
@@ -1524,19 +1529,29 @@ if(navigator.storage && navigator.storage.persist){
    全データ削除
 ========================================================= */
 
-document.getElementById("deleteAllButton").addEventListener("click", () => {
-  if(!window.confirm("保存されている営業日報と車両情報をすべて削除します。\n\nこの操作は元に戻せません。\n\n削除しますか？")) return;
+function deleteData(keepTodos){
+  const message = keepTodos
+    ? "営業日報と車両情報を削除します。TODOリストは残します。\n\nこの操作は元に戻せません。\n\n削除しますか？"
+    : "保存されている営業日報・車両情報・TODOリストをすべて削除します。\n\nこの操作は元に戻せません。\n\n削除しますか？";
+  if(!window.confirm(message)) return;
 
   localStorage.removeItem(LOG_KEY);
   localStorage.removeItem(VEHICLE_KEY);
-
   meetingLogs = [];
   dailyVehicleInfo = {};
+
+  if(!keepTodos){
+    localStorage.removeItem(TODO_KEY);
+    todoItems = [];
+  }
   currentVisit = null;
 
   goToReport();
-  showToast("全データを削除しました");
-});
+  showToast(keepTodos ? "TODO以外を削除しました" : "全データを削除しました");
+}
+
+document.getElementById("deleteAllButton").addEventListener("click", () => deleteData(false));
+document.getElementById("deleteKeepTodoButton").addEventListener("click", () => deleteData(true));
 
 
 /* =========================================================
