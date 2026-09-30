@@ -95,6 +95,8 @@
     background:var(--mint-dark);
   }
   h2:first-child{ margin-top:4px; }
+  h2.h2-flex{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .h2-note{ font-size:12px; font-weight:400; color:var(--ink-soft); white-space:nowrap; }
 
   .card{
     background:var(--card);
@@ -294,6 +296,8 @@
   .content-line{ display:flex; align-items:flex-start; gap:8px; margin-bottom:4px; }
   .content-line input[type=checkbox]{ margin-top:3px; width:16px; height:16px; flex:0 0 auto; }
   .content-line span{ font-size:13.5px; line-height:1.5; }
+  .content-line .line-done{ text-decoration:line-through; text-decoration-color:#D64545; text-decoration-thickness:1.5px; }
+  .content-line .done-suffix{ color:#D64545; margin-left:4px; }
 
   .chip-group{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
   .chip{
@@ -393,7 +397,7 @@
 
     <div class="todo-list-target" data-hide-empty="1"></div>
 
-    <h2>本日の訪問（<span id="visitCount">0</span>件）</h2>
+    <h2 class="h2-flex"><span>本日の訪問（<span id="visitCount">0</span>件）</span><span class="h2-note">✓ 　ToDoリストへ追加</span></h2>
     <div id="visitList"></div>
 
   </section>
@@ -519,7 +523,7 @@
       </div>
     </div>
 
-    <h2>TODOリスト</h2>
+    <h2 class="h2-flex"><span>TODOリスト</span><span class="h2-note">消す=コピー可</span></h2>
 
     <div class="card">
       <div class="field">
@@ -768,17 +772,30 @@ document.getElementById("navVehicleButton").addEventListener("click", () => {
    ホーム（営業日報一覧）画面の描画
 ========================================================= */
 
+// 対応日を「(9/30)」の形に。端末の現地時間で月日を求める
+function formatCompletedDay(iso){
+  if(!iso) return "";
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return "";
+  return `(${d.getMonth() + 1}/${d.getDate()})`;
+}
+
 function buildContentLinesHtml(log){
   const lines = (log.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
   if(lines.length === 0) return "";
 
   const rows = lines.map((line, idx) => {
     const sourceId = `${log.createdAt}::${idx}`;
-    const checked = todoItems.some(t => t.sourceId === sourceId);
-    return `<div class="content-line"><input type="checkbox" class="content-line-checkbox" data-source="${sourceId}"${checked ? " checked" : ""}><span>${escapeHtml(line)}</span></div>`;
+    const todo = todoItems.find(t => t.sourceId === sourceId);
+    const checked = !!todo;
+    const done = !!(todo && todo.done);
+    const text = done
+      ? `<span class="line-done">${escapeHtml(line)}</span><span class="done-suffix">(対応済)${formatCompletedDay(todo.completedAt)}</span>`
+      : escapeHtml(line);
+    return `<div class="content-line"><input type="checkbox" class="content-line-checkbox" data-source="${sourceId}"${checked ? " checked" : ""}><span>${text}</span></div>`;
   }).join("");
 
-  return `<div class="field" style="margin-top:6px;"><label>内容（チェックした行がTODOに追加されます）</label>${rows}</div>`;
+  return `<div style="margin-top:6px;">${rows}</div>`;
 }
 
 function renderReportScreen(){
@@ -1362,7 +1379,8 @@ function renderTodoList(){
     // 車両画面以外(ホーム・訪問入力)では見出しを付ける
     if(hideEmpty){
       const h = document.createElement("h2");
-      h.textContent = "TODOリスト";
+      h.className = "h2-flex";
+      h.innerHTML = '<span>TODOリスト</span><span class="h2-note">消す=コピー可</span>';
       container.appendChild(h);
     }
 
@@ -1390,7 +1408,11 @@ function renderTodoList(){
           item.completedAt = new Date().toISOString();
           saveTodos();
         }
-        renderTodoList();
+        if(document.getElementById("reportScreen").classList.contains("active")){
+          renderReportScreen(); // 訪問カードの「対応済」表示も更新（TODO一覧も再描画される）
+        }else{
+          renderTodoList();
+        }
       });
     });
   });
