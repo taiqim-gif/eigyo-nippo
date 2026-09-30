@@ -242,6 +242,10 @@
     color:var(--ink-soft);
     margin-top:4px;
   }
+  .dial-row{ display:flex; align-items:center; gap:16px; margin-top:14px; }
+  .dial-actions{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .dial-actions .btn{ padding:18px 10px; }
+  .dial-actions .dial-hint{ margin-top:0; }
 
   .status-pill{
     display:inline-block;
@@ -253,6 +257,43 @@
     color:var(--ink-soft);
   }
   .status-pill.on{ background:#E4F1EC; color:var(--mint-ink); }
+
+  .mode-switch{ display:flex; background:#F2EEE4; border-radius:999px; padding:4px; gap:4px; }
+  .mode-switch-btn{
+    flex:1;
+    border:none;
+    background:transparent;
+    padding:10px;
+    border-radius:999px;
+    font-family:inherit;
+    font-size:14px;
+    font-weight:700;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .mode-switch-btn.active{ background:#fff; color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+
+  .todo-item{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-left:5px solid var(--lavender);
+    border-radius:var(--radius);
+    padding:10px 12px;
+    margin-bottom:8px;
+  }
+  .todo-item label{ display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .todo-item input[type=checkbox]{ width:18px; height:18px; flex:0 0 auto; }
+  .todo-item .todo-line{
+    flex:1; min-width:0;
+    font-size:14px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .content-line{ display:flex; align-items:flex-start; gap:8px; margin-bottom:4px; }
+  .content-line input[type=checkbox]{ margin-top:3px; width:16px; height:16px; flex:0 0 auto; }
+  .content-line span{ font-size:13.5px; line-height:1.5; }
 
   .chip-group{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
   .chip{
@@ -347,13 +388,10 @@
 
     <div class="footer-actions">
       <button class="btn btn-outline-mint" id="mailButton">日報をメール送信</button>
-      <div class="row-gap">
-        <button class="btn btn-outline-mint" id="backupButton">バックアップ保存</button>
-        <button class="btn btn-outline-mint" id="restoreButton">バックアップ復元</button>
-      </div>
-      <input type="file" id="restoreFile" accept="application/json,.json" style="display:none;">
       <button class="btn btn-outline-pink" id="deleteAllButton">全データを削除</button>
     </div>
+
+    <div class="todo-list-target" data-hide-empty="1"></div>
 
     <h2>本日の訪問（<span id="visitCount">0</span>件）</h2>
     <div id="visitList"></div>
@@ -427,6 +465,8 @@
       </div>
     </div>
 
+    <div class="todo-list-target" data-hide-empty="1"></div>
+
   </section>
 
 
@@ -436,59 +476,39 @@
     <h2>車両情報</h2>
 
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <strong style="font-size:14px;">出発</strong>
-        <span class="status-pill" id="departureStatusPill">未出発</span>
+      <div class="mode-switch" id="vehicleModeSwitch">
+        <button type="button" class="mode-switch-btn" data-mode="departure">出発</button>
+        <button type="button" class="mode-switch-btn" data-mode="return">帰社</button>
       </div>
 
-      <div class="field">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-          <label for="departureDistance" style="margin-bottom:0;">走行距離</label>
-          <span style="font-size:12px;color:var(--ink-soft);" id="departureTimeText"></span>
-        </div>
-        <input type="number" inputmode="decimal" id="departureDistance" placeholder="例：12345">
-        <div class="distance-controls">
-          <div class="dial" id="departureDial" data-target="departureDistance">
-            <div class="dial-rotor"><span class="dial-dot"></span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 12px;">
+        <strong style="font-size:14px;" id="vehicleModeLabel">出発</strong>
+        <span class="status-pill" id="vehicleStatusPill">未出発</span>
+      </div>
+
+      <div class="row-gap" style="align-items:flex-end;">
+        <div class="field" style="margin-bottom:0;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+            <label for="vehicleDistance" style="margin-bottom:0;">走行距離</label>
+            <span style="font-size:12px;color:var(--ink-soft);" id="vehicleTimeText"></span>
           </div>
+          <input type="number" inputmode="decimal" id="vehicleDistance" placeholder="例：12345">
         </div>
-        <div class="dial-hint">ダイヤル中心の近くを回すと細かく、外側を回すと大きく変化します</div>
-      </div>
-
-      <div class="row-gap">
-        <button class="btn btn-peach" id="departureButton">出発</button>
-        <button class="btn btn-text" id="departureResetButton" style="display:none;flex:0 0 auto;">やり直す</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <strong style="font-size:14px;">帰社</strong>
-        <span class="status-pill" id="returnStatusPill">未帰社</span>
-      </div>
-
-      <div class="field">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-          <label for="returnDistance" style="margin-bottom:0;">走行距離</label>
-          <span style="font-size:12px;color:var(--ink-soft);" id="returnTimeText"></span>
+        <div class="field" style="margin-bottom:0;">
+          <label for="vehicleFuel">給油量（L）</label>
+          <input type="number" inputmode="decimal" id="vehicleFuel" placeholder="空欄Ok">
         </div>
-        <input type="number" inputmode="decimal" id="returnDistance">
-        <div class="distance-controls">
-          <div class="dial" id="returnDial" data-target="returnDistance">
-            <div class="dial-rotor"><span class="dial-dot"></span></div>
-          </div>
+      </div>
+
+      <div class="dial-row">
+        <div class="dial" id="vehicleDial" data-target="vehicleDistance">
+          <div class="dial-rotor"><span class="dial-dot"></span></div>
         </div>
-        <div class="dial-hint">ダイヤル中心の近くを回すと細かく、外側を回すと大きく変化します</div>
-      </div>
-
-      <div class="field">
-        <label for="returnFuel">給油量（L）</label>
-        <input type="number" inputmode="decimal" id="returnFuel" placeholder="空欄Ok">
-      </div>
-
-      <div class="row-gap">
-        <button class="btn btn-sky" id="returnButton">帰社</button>
-        <button class="btn btn-text" id="returnResetButton" style="display:none;flex:0 0 auto;">やり直す</button>
+        <div class="dial-actions">
+          <button class="btn btn-peach" id="vehicleSaveButton">出発</button>
+          <button class="btn btn-text" id="vehicleResetButton" style="display:none;">やり直す</button>
+          <div class="dial-hint">中心ほど細かく、外側ほど大きく変化</div>
+        </div>
       </div>
     </div>
 
@@ -498,6 +518,18 @@
         <span style="font-weight:700;" id="distanceSummaryText"></span>
       </div>
     </div>
+
+    <h2>TODOリスト</h2>
+
+    <div class="card">
+      <div class="field">
+        <label for="todoManualInput">やることを追加</label>
+        <input type="text" id="todoManualInput" placeholder="例：〇〇へ電話">
+      </div>
+      <button class="btn btn-lavender" id="todoAddButton">追加</button>
+    </div>
+
+    <div class="todo-list-target"></div>
 
   </section>
 
@@ -693,6 +725,7 @@ function updateNav(screenName){
 }
 
 function goToReport(){
+  vehicleViewMode = null;
   renderReportScreen();
   showScreen("report");
   updateNav("report");
@@ -705,6 +738,8 @@ function goToVehicle(){
 }
 
 function goToVisit(){
+  vehicleViewMode = null;
+  renderTodoList();
   showScreen("visit");
   updateNav("visit");
 }
@@ -733,7 +768,21 @@ document.getElementById("navVehicleButton").addEventListener("click", () => {
    ホーム（営業日報一覧）画面の描画
 ========================================================= */
 
+function buildContentLinesHtml(log){
+  const lines = (log.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  if(lines.length === 0) return "";
+
+  const rows = lines.map((line, idx) => {
+    const sourceId = `${log.createdAt}::${idx}`;
+    const checked = todoItems.some(t => t.sourceId === sourceId);
+    return `<div class="content-line"><input type="checkbox" class="content-line-checkbox" data-source="${sourceId}"${checked ? " checked" : ""}><span>${escapeHtml(line)}</span></div>`;
+  }).join("");
+
+  return `<div class="field" style="margin-top:6px;"><label>内容（チェックした行がTODOに追加されます）</label>${rows}</div>`;
+}
+
 function renderReportScreen(){
+  renderTodoList();
   const today = getToday();
   const logs = meetingLogs
     .filter(x => x.date === today)
@@ -765,7 +814,7 @@ function renderReportScreen(){
         <span class="time">${timeRange}</span>
       </div>
       ${person ? `<div class="meta">${escapeHtml(person)}</div>` : ""}
-      ${log.content ? `<div class="content">${escapeHtml(log.content)}</div>` : ""}
+      ${buildContentLinesHtml(log)}
       ${log.notes ? `<div class="content"><strong>特記事項：</strong>${escapeHtml(log.notes)}</div>` : ""}
       <div class="row-gap">
         <button class="card-action edit" data-id="${log.createdAt}">編集</button>
@@ -788,6 +837,44 @@ function renderReportScreen(){
       saveLogs();
       renderReportScreen();
       showToast("削除しました");
+    });
+  });
+
+  list.querySelectorAll(".content-line-checkbox").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const sourceId = cb.getAttribute("data-source");
+      const sepIndex = sourceId.lastIndexOf("::");
+      const createdAt = sourceId.slice(0, sepIndex);
+      const idx = parseInt(sourceId.slice(sepIndex + 2), 10);
+
+      const log = meetingLogs.find(x => x.createdAt === createdAt);
+      if(!log) return;
+
+      const lines = (log.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
+      const lineText = lines[idx];
+      if(!lineText) return;
+
+      if(cb.checked){
+        if(!todoItems.some(t => t.sourceId === sourceId)){
+          todoItems.push({
+            id: makeId(),
+            date: log.date,
+            target: log.target || "",
+            content: lineText,
+            done: false,
+            source: "line",
+            sourceId: sourceId,
+            createdAt: new Date().toISOString()
+          });
+          saveTodos();
+          renderTodoList();
+          showToast("TODOに追加しました");
+        }
+      }else{
+        todoItems = todoItems.filter(t => t.sourceId !== sourceId);
+        saveTodos();
+        renderTodoList();
+      }
     });
   });
 }
@@ -1072,51 +1159,67 @@ function getLatestPastReturnDistance(excludeDate){
   return dailyVehicleInfo[dates[0]].return.distance;
 }
 
+// 出発／帰社どちらを表示中か（画面を離れるとリセットされ、次回は状態から自動判定）
+let vehicleViewMode = null;
+
+function getDefaultVehicleMode(vehicle){
+  if(!vehicle.departure.time) return "departure";
+  if(!vehicle.return.time) return "return";
+  return "return";
+}
+
 function renderVehicleScreen(){
   const vehicle = getTodayVehicle();
   const today = getToday();
 
-  // 出発
-  const departed = !!vehicle.departure.time;
+  if(vehicleViewMode === null){
+    vehicleViewMode = getDefaultVehicleMode(vehicle);
+  }
 
-  if(!departed && !vehicle.departure.distance){
+  if(!vehicle.departure.time && !vehicle.departure.distance){
     const prefill = getLatestPastReturnDistance(today);
     if(prefill !== ""){
       vehicle.departure.distance = prefill;
     }
   }
-
-  document.getElementById("departureDistance").value = vehicle.departure.distance || "";
-  document.getElementById("departureDistance").disabled = departed;
-  document.getElementById("departureDial").classList.toggle("disabled", departed);
-  document.getElementById("departureDial").classList.toggle("disabled", departed);
-  document.getElementById("departureButton").style.display = departed ? "none" : "block";
-  document.getElementById("departureResetButton").style.display = departed ? "block" : "none";
-  document.getElementById("departureStatusPill").textContent = departed ? "出発済み" : "未出発";
-  document.getElementById("departureStatusPill").classList.toggle("on", departed);
-  document.getElementById("departureTimeText").textContent = formatTimeOnly(vehicle.departure.time);
-
-  // 帰社（未帰社の間は出発距離をそのまま初期値として表示）
-  const returned = !!vehicle.return.time;
-
-  if(!returned && !vehicle.return.distance && vehicle.departure.distance){
+  if(!vehicle.return.time && !vehicle.return.distance && vehicle.departure.distance){
     vehicle.return.distance = vehicle.departure.distance;
   }
 
-  document.getElementById("returnDistance").value = vehicle.return.distance || "";
-  document.getElementById("returnDistance").disabled = returned;
-  document.getElementById("returnDial").classList.toggle("disabled", returned);
-  document.getElementById("returnDial").classList.toggle("disabled", returned);
+  document.querySelectorAll(".mode-switch-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-mode") === vehicleViewMode);
+  });
 
-  document.getElementById("returnFuel").value = vehicle.return.fuel || "";
-  document.getElementById("returnFuel").disabled = returned;
+  const leg = vehicle[vehicleViewMode]; // departure か return のどちらか
+  const done = !!leg.time;
 
-  document.getElementById("returnButton").style.display = returned ? "none" : "block";
-  document.getElementById("returnButton").disabled = !departed;
-  document.getElementById("returnResetButton").style.display = returned ? "block" : "none";
-  document.getElementById("returnStatusPill").textContent = returned ? "帰社済み" : "未帰社";
-  document.getElementById("returnStatusPill").classList.toggle("on", returned);
-  document.getElementById("returnTimeText").textContent = formatTimeOnly(vehicle.return.time);
+  document.getElementById("vehicleModeLabel").textContent = vehicleViewMode === "departure" ? "出発" : "帰社";
+  document.getElementById("vehicleStatusPill").textContent =
+    vehicleViewMode === "departure" ? (done ? "出発済み" : "未出発") : (done ? "帰社済み" : "未帰社");
+  document.getElementById("vehicleStatusPill").classList.toggle("on", done);
+  document.getElementById("vehicleTimeText").textContent = formatTimeOnly(leg.time);
+
+  document.getElementById("vehicleDistance").value = leg.distance || "";
+  document.getElementById("vehicleDistance").disabled = done;
+  document.getElementById("vehicleDial").classList.toggle("disabled", done);
+
+  document.getElementById("vehicleFuel").value = vehicle.return.fuel || "";
+
+  const saveBtn = document.getElementById("vehicleSaveButton");
+  const resetBtn = document.getElementById("vehicleResetButton");
+
+  if(vehicleViewMode === "departure"){
+    saveBtn.textContent = "出発";
+    saveBtn.className = "btn btn-peach";
+    saveBtn.disabled = false;
+    saveBtn.style.display = done ? "none" : "block";
+  }else{
+    saveBtn.textContent = "帰社";
+    saveBtn.className = "btn btn-sky";
+    saveBtn.disabled = !vehicle.departure.time;
+    saveBtn.style.display = done ? "none" : "block";
+  }
+  resetBtn.style.display = done ? "block" : "none";
 
   const summaryCard = document.getElementById("distanceSummaryCard");
   const dDist = parseFloat(vehicle.departure.distance);
@@ -1130,81 +1233,187 @@ function renderVehicleScreen(){
   }
 
   saveVehicle();
+  renderTodoList();
 }
 
-document.getElementById("departureDistance").addEventListener("change", () => {
+document.querySelectorAll(".mode-switch-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    vehicleViewMode = btn.getAttribute("data-mode");
+    renderVehicleScreen();
+  });
+});
+
+document.getElementById("vehicleDistance").addEventListener("change", () => {
   const vehicle = getTodayVehicle();
-  vehicle.departure.distance = document.getElementById("departureDistance").value;
+  vehicle[vehicleViewMode].distance = document.getElementById("vehicleDistance").value;
   saveVehicle();
 });
 
-document.getElementById("returnDistance").addEventListener("change", () => {
+document.getElementById("vehicleFuel").addEventListener("change", () => {
   const vehicle = getTodayVehicle();
-  vehicle.return.distance = document.getElementById("returnDistance").value;
+  vehicle.return.fuel = document.getElementById("vehicleFuel").value;
   saveVehicle();
 });
 
-document.getElementById("returnFuel").addEventListener("change", () => {
+document.getElementById("vehicleSaveButton").addEventListener("click", async () => {
   const vehicle = getTodayVehicle();
-  vehicle.return.fuel = document.getElementById("returnFuel").value;
-  saveVehicle();
-});
+  const leg = vehicle[vehicleViewMode];
 
-document.getElementById("departureButton").addEventListener("click", async () => {
-  const vehicle = getTodayVehicle();
-  vehicle.departure.distance = document.getElementById("departureDistance").value;
-  vehicle.departure.time = getNowDateTimeLocal();
+  leg.distance = document.getElementById("vehicleDistance").value;
+  if(vehicleViewMode === "return"){
+    vehicle.return.fuel = document.getElementById("vehicleFuel").value;
+  }
+  leg.time = getNowDateTimeLocal();
 
   const location = await getLocation();
-  vehicle.departure.location = location.location;
-  vehicle.departure.lat = location.lat;
-  vehicle.departure.lng = location.lng;
+  leg.location = location.location;
+  leg.lat = location.lat;
+  leg.lng = location.lng;
 
-  vehicle.status = "departed";
+  vehicle.status = vehicleViewMode === "departure" ? "departed" : "returned";
   saveVehicle();
-  goToReport();
-  showToast("出発を記録しました");
+
+  if(vehicleViewMode === "departure"){
+    vehicleViewMode = "return"; // 出発を記録したら自動で帰社側に切り替え
+    renderVehicleScreen();
+    showToast("出発を記録しました");
+  }else{
+    goToReport();
+    showToast("帰社を記録しました");
+    sendReportMail(); // メール送信ボタンと同じ動作
+  }
 });
 
-document.getElementById("returnButton").addEventListener("click", async () => {
+document.getElementById("vehicleResetButton").addEventListener("click", () => {
+  const label = vehicleViewMode === "departure" ? "出発" : "帰社";
+  if(!window.confirm(`${label}の記録をやり直しますか？`)) return;
+
   const vehicle = getTodayVehicle();
-  vehicle.return.distance = document.getElementById("returnDistance").value;
-  vehicle.return.fuel = document.getElementById("returnFuel").value;
-  vehicle.return.time = getNowDateTimeLocal();
+  const leg = vehicle[vehicleViewMode];
+  leg.time = "";
+  leg.location = "";
+  leg.lat = "";
+  leg.lng = "";
 
-  const location = await getLocation();
-  vehicle.return.location = location.location;
-  vehicle.return.lat = location.lat;
-  vehicle.return.lng = location.lng;
-
-  vehicle.status = "returned";
-  saveVehicle();
-  goToReport();
-  showToast("帰社を記録しました");
-});
-
-document.getElementById("departureResetButton").addEventListener("click", () => {
-  if(!window.confirm("出発の記録をやり直しますか？")) return;
-  const vehicle = getTodayVehicle();
-  vehicle.departure.time = "";
-  vehicle.departure.location = "";
-  vehicle.departure.lat = "";
-  vehicle.departure.lng = "";
-  vehicle.status = "before";
+  vehicle.status = vehicle.departure.time && vehicleViewMode === "return" ? "departed" : "before";
   saveVehicle();
   renderVehicleScreen();
 });
 
-document.getElementById("returnResetButton").addEventListener("click", () => {
-  if(!window.confirm("帰社の記録をやり直しますか？")) return;
-  const vehicle = getTodayVehicle();
-  vehicle.return.time = "";
-  vehicle.return.location = "";
-  vehicle.return.lat = "";
-  vehicle.return.lng = "";
-  vehicle.status = vehicle.departure.time ? "departed" : "before";
-  saveVehicle();
-  renderVehicleScreen();
+
+/* =========================================================
+   TODOリスト
+   ・訪問記録の「内容」を1行ずつチェックすると追加される
+   ・手入力でも追加できる
+   ・完了マークを付けるまでずっと表示され続ける
+========================================================= */
+
+const TODO_KEY = "todoItems";
+let todoItems = JSON.parse(localStorage.getItem(TODO_KEY) || "[]");
+
+function saveTodos(){ localStorage.setItem(TODO_KEY, JSON.stringify(todoItems)); }
+
+function makeId(){ return `${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
+
+function formatMonthDay(dateStr){
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(dateStr || "");
+  return m ? `${parseInt(m[2],10)}/${parseInt(m[3],10)}` : "";
+}
+
+function fallbackCopy(text){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  ta.remove();
+}
+
+function copyToClipboard(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  }else{
+    fallbackCopy(text);
+  }
+}
+
+function renderTodoList(){
+  const active = todoItems
+    .filter(t => !t.done)
+    .sort((a,b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+
+  document.querySelectorAll(".todo-list-target").forEach(container => {
+    container.innerHTML = "";
+    const hideEmpty = container.getAttribute("data-hide-empty") === "1";
+
+    if(active.length === 0){
+      if(!hideEmpty){
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "TODOはありません";
+        container.appendChild(empty);
+      }
+      return;
+    }
+
+    // 車両画面以外(ホーム・訪問入力)では見出しを付ける
+    if(hideEmpty){
+      const h = document.createElement("h2");
+      h.textContent = "TODOリスト";
+      container.appendChild(h);
+    }
+
+    active.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "todo-item";
+      div.innerHTML = `
+        <label>
+          <input type="checkbox" class="todo-complete" data-id="${item.id}">
+          <span class="todo-line">${escapeHtml(formatMonthDay(item.date))}　${item.target ? escapeHtml(item.target) + "　" : ""}${escapeHtml(item.content)}</span>
+        </label>
+      `;
+      container.appendChild(div);
+    });
+
+    container.querySelectorAll(".todo-complete").forEach(cb => {
+      cb.addEventListener("change", () => {
+        const id = cb.getAttribute("data-id");
+        const item = todoItems.find(t => t.id === id);
+        if(item){
+          const md = formatMonthDay(item.date);
+          copyToClipboard([item.target, item.content].filter(Boolean).join("　") + (md ? `(${md}分)` : ""));
+          showToast("コピーしました");
+          item.done = true;
+          item.completedAt = new Date().toISOString();
+          saveTodos();
+        }
+        renderTodoList();
+      });
+    });
+  });
+}
+
+document.getElementById("todoAddButton").addEventListener("click", () => {
+  const input = document.getElementById("todoManualInput");
+  const text = input.value.trim();
+  if(!text) return;
+
+  todoItems.push({
+    id: makeId(),
+    date: getToday(),
+    target: "",
+    content: text,
+    done: false,
+    source: "manual",
+    sourceId: null,
+    createdAt: new Date().toISOString()
+  });
+  saveTodos();
+  input.value = "";
+  renderTodoList();
 });
 
 
@@ -1212,7 +1421,7 @@ document.getElementById("returnResetButton").addEventListener("click", () => {
    メール送信
 ========================================================= */
 
-document.getElementById("mailButton").addEventListener("click", () => {
+function sendReportMail(){
   const today = getToday();
   const logs = meetingLogs
     .filter(x => x.date === today)
@@ -1243,53 +1452,10 @@ document.getElementById("mailButton").addEventListener("click", () => {
   const subject = `営業日報 ${today}`;
   const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = mailto;
-});
+}
 
+document.getElementById("mailButton").addEventListener("click", sendReportMail);
 
-/* =========================================================
-   バックアップ保存／復元（端末内データをファイルに退避）
-========================================================= */
-
-document.getElementById("backupButton").addEventListener("click", () => {
-  const data = { version:1, exportedAt:new Date().toISOString(), meetingLogs, dailyVehicleInfo };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `営業日報バックアップ_${getToday()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast("バックアップを保存しました");
-});
-
-document.getElementById("restoreButton").addEventListener("click", () => {
-  document.getElementById("restoreFile").click();
-});
-
-document.getElementById("restoreFile").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  e.target.value = "";
-  if(!file) return;
-
-  try{
-    const data = JSON.parse(await file.text());
-    if(!Array.isArray(data.meetingLogs) || typeof data.dailyVehicleInfo !== "object"){
-      throw new Error("format");
-    }
-    if(!window.confirm("現在のデータをバックアップの内容に置き換えます。よろしいですか？")) return;
-
-    meetingLogs = data.meetingLogs;
-    dailyVehicleInfo = data.dailyVehicleInfo;
-    saveLogs();
-    saveVehicle();
-    goToReport();
-    showToast("復元しました");
-  }catch(err){
-    window.alert("バックアップファイルを読み込めませんでした。");
-  }
-});
 
 // ブラウザによる自動削除を受けにくくするよう保存領域の永続化を要求
 if(navigator.storage && navigator.storage.persist){
