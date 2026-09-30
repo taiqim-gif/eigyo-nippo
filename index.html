@@ -777,7 +777,20 @@ function formatCompletedDay(iso){
   if(!iso) return "";
   const d = new Date(iso);
   if(isNaN(d.getTime())) return "";
-  return `(${d.getMonth() + 1}/${d.getDate()})`;
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+// 「(10/1 済)」の形。対応日が不明な場合は「(済)」
+function formatDoneSuffix(iso){
+  const day = formatCompletedDay(iso);
+  return day ? `(${day} 済)` : "(済)";
+}
+
+function toLocalDateKey(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
 }
 
 function buildContentLinesHtml(log){
@@ -790,7 +803,7 @@ function buildContentLinesHtml(log){
     const checked = !!todo;
     const done = !!(todo && todo.done);
     const text = done
-      ? `<span class="line-done">${escapeHtml(line)}</span><span class="done-suffix">(対応済)${formatCompletedDay(todo.completedAt)}</span>`
+      ? `<span class="line-done">${escapeHtml(line)}</span><span class="done-suffix">${formatDoneSuffix(todo.completedAt)}</span>`
       : escapeHtml(line);
     return `<div class="content-line"><input type="checkbox" class="content-line-checkbox" data-source="${sourceId}"${checked ? " checked" : ""}><span>${text}</span></div>`;
   }).join("");
@@ -1443,7 +1456,7 @@ document.getElementById("todoAddButton").addEventListener("click", () => {
    メール送信
 ========================================================= */
 
-function sendReportMail(){
+function buildReportMail(){
   const today = getToday();
   const logs = meetingLogs
     .filter(x => x.date === today)
@@ -1462,6 +1475,22 @@ function sendReportMail(){
   body += `帰社時刻：${formatTimeOnly(vehicle.return.time)}\n`;
   body += `給油量：${vehicle.return.fuel || ""}\n\n`;
 
+  // TODOリスト：未対応はすべて、対応済は本日対応したもの
+  const pendingTodos = todoItems
+    .filter(t => !t.done)
+    .sort((a,b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+  const doneTodayTodos = todoItems
+    .filter(t => t.done && t.completedAt && toLocalDateKey(new Date(t.completedAt)) === today)
+    .sort((a,b) => (a.completedAt || "").localeCompare(b.completedAt || ""));
+
+  [...pendingTodos, ...doneTodayTodos].forEach((t, i) => {
+    body += `【TODO ${i + 1}】\n`;
+    body += `月日：${formatMonthDay(t.date)}\n`;
+    body += `客先名：${t.target || ""}\n`;
+    body += `内容：${t.content || ""}\n`;
+    body += `対応日：${t.done ? formatCompletedDay(t.completedAt) : "未対応"}\n\n`;
+  });
+
   logs.forEach((log, i) => {
     body += `【訪問先 ${log.number || (i + 1)}】\n`;
     body += `訪問先：${log.target || ""}\n`;
@@ -1471,7 +1500,11 @@ function sendReportMail(){
     body += `特記事項：${log.notes || ""}\n\n`;
   });
 
-  const subject = `営業日報 ${today}`;
+  return { subject: `営業日報 ${today}`, body };
+}
+
+function sendReportMail(){
+  const { subject, body } = buildReportMail();
   const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = mailto;
 }
