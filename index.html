@@ -183,6 +183,18 @@
   .btn-outline-pink{ background:#fff; color:var(--pink-ink); border:1.5px solid var(--pink); }
   .btn-pink{ background:var(--pink); color:var(--pink-ink); border:1.5px solid var(--pink); }
   .delete-row .btn{ font-size:13.5px; padding:13px 6px; }
+
+  .master-bar{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; color:var(--ink-soft); margin-bottom:12px; }
+  .btn-mini{ border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; font-size:12px; font-weight:700; font-family:inherit; color:var(--ink); cursor:pointer; }
+  .master-actions .btn{ font-size:13.5px; padding:12px 6px; }
+  .kana-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-bottom:8px; }
+  .kana-btn{ padding:10px 0; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+  .kana-btn.active{ background:var(--butter); border-color:var(--butter-dark); color:var(--butter-ink); }
+  .customer-list{ max-height:200px; overflow-y:auto; border:1.5px solid var(--line); border-radius:10px; background:#fff; margin-bottom:8px; }
+  .customer-item{ display:block; width:100%; text-align:left; padding:11px 12px; border:none; border-bottom:1px solid var(--line); background:#fff; font-family:inherit; font-size:14px; color:var(--ink); cursor:pointer; }
+  .customer-item:last-child{ border-bottom:none; }
+  .customer-item:active{ background:var(--butter); }
+  .customer-empty{ padding:12px; font-size:13px; color:var(--ink-soft); text-align:center; }
   .btn-compact{ flex:1; padding:10px 4px; font-size:12.5px; }
 
   .btn-text{
@@ -385,10 +397,35 @@
   <section id="reportScreen" class="screen active">
 
     <div class="card">
+      <div class="master-bar">
+        <span id="masterStatus">客先名リスト：未取得</span>
+        <span style="display:flex;gap:6px;">
+          <button type="button" class="btn-mini" id="masterFetchButton">取得</button>
+          <button type="button" class="btn-mini" id="masterClearButton" style="display:none;">消す</button>
+        </span>
+      </div>
+
+      <div id="masterKeyBox" style="display:none;margin-bottom:14px;">
+        <label for="masterKeyInput" style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px;">営業所キー</label>
+        <input type="password" id="masterKeyInput" autocomplete="off" autocapitalize="characters" spellcheck="false" style="margin-bottom:8px;">
+        <div class="row-gap master-actions">
+          <button type="button" class="btn btn-mint" id="masterFileButton">ファイルから取り込む</button>
+          <button type="button" class="btn btn-outline-mint" id="masterGoButton">ネットから取得</button>
+        </div>
+        <input type="file" id="masterFile" style="display:none;">
+        <div id="masterMessage" style="font-size:12px;margin-top:6px;min-height:16px;"></div>
+      </div>
+
       <div class="field">
         <label for="homeVisitTarget">訪問先</label>
-        <input type="text" id="homeVisitTarget" placeholder="例：〇〇商店">
+        <input type="text" id="homeVisitTarget" placeholder="例：〇〇商店" autocomplete="off">
       </div>
+
+      <div id="kanaArea" style="display:none;">
+        <div class="kana-grid" id="kanaGrid"></div>
+        <div class="customer-list" id="customerList" style="display:none;"></div>
+      </div>
+
       <button class="btn btn-lavender" id="homeStartButton">開始</button>
     </div>
 
@@ -555,6 +592,54 @@
 const LOG_KEY = "meetingLogs";
 const VEHICLE_KEY = "dailyVehicleInfo";
 const LAST_OPEN_KEY = "appLastOpenDate";
+
+/* ===CRYPTO-BEGIN=== */
+const MASTER_SALT = "eigyo-nippo-master-v1";
+const MASTER_ITER = 600000;
+
+function normalizeKey(raw){
+  return String(raw || "").normalize("NFKC").toUpperCase().replace(/[\s\-\u30FC\u2010-\u2015\u2212]/g, "");
+}
+
+function toHex(buf){
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function deriveMaster(rawKey){
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey("raw", enc.encode(normalizeKey(rawKey)), "PBKDF2", false, ["deriveBits"]);
+  const master = await crypto.subtle.deriveBits(
+    { name:"PBKDF2", hash:"SHA-256", salt:enc.encode(MASTER_SALT), iterations:MASTER_ITER }, base, 256);
+  const hk = await crypto.subtle.importKey("raw", master, "HKDF", false, ["deriveBits"]);
+  const empty = new Uint8Array(0);
+  const aesBits = await crypto.subtle.deriveBits(
+    { name:"HKDF", hash:"SHA-256", salt:empty, info:enc.encode("aes-key") }, hk, 256);
+  const idBits = await crypto.subtle.deriveBits(
+    { name:"HKDF", hash:"SHA-256", salt:empty, info:enc.encode("file-id") }, hk, 128);
+  const aesKey = await crypto.subtle.importKey("raw", aesBits, "AES-GCM", false, ["encrypt", "decrypt"]);
+  return { aesKey, fileId: toHex(idBits) };
+}
+
+async function encryptMaster(aesKey, obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = new TextEncoder().encode(JSON.stringify(obj));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name:"AES-GCM", iv }, aesKey, data));
+  const out = new Uint8Array(iv.length + ct.length);
+  out.set(iv, 0);
+  out.set(ct, iv.length);
+  return out;
+}
+
+async function decryptMaster(aesKey, buffer){
+  const bytes = new Uint8Array(buffer);
+  if(bytes.length < 29) throw new Error("bad-format");
+  const iv = bytes.slice(0, 12);
+  const ct = bytes.slice(12);
+  const plain = await crypto.subtle.decrypt({ name:"AES-GCM", iv }, aesKey, ct);
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+/* ===CRYPTO-END=== */
+
 
 const CONTENT_TYPES = ["引取","配達","注文","営業","周知文書","集金","苦情","新規"];
 const HONORIFIC_OPTIONS = ["社長","工場長","専務","常務","部長","課長"];
@@ -1012,6 +1097,7 @@ document.getElementById("homeStartButton").addEventListener("click", async () =>
     isEdit:false,
     number,
     target,
+    customerCode: resolveCustomerCode(target),
     startTime,
     startLocation: location.location,
     startLat: location.lat,
@@ -1021,6 +1107,10 @@ document.getElementById("homeStartButton").addEventListener("click", async () =>
   };
 
   document.getElementById("homeVisitTarget").value = "";
+  selectedCustomer = null;
+  activeKana = null;
+  renderKanaGrid();
+  renderCustomerList();
 
   document.getElementById("visitScreenTitle").innerHTML =
     `訪問先 <span>${number}</span>`;
@@ -1110,7 +1200,11 @@ document.getElementById("endButton").addEventListener("click", async () => {
   if(currentVisit.isEdit){
     const log = meetingLogs.find(x => x.createdAt === currentVisit.editId);
     if(log){
-      log.target = document.getElementById("visitTarget").value.trim();
+      const newTarget = document.getElementById("visitTarget").value.trim();
+      if(newTarget !== log.target){
+        log.customerCode = resolveCustomerCode(newTarget);
+      }
+      log.target = newTarget;
       log.attendee = document.getElementById("meetingPerson").value.trim();
       log.attendeeTitle = document.getElementById("meetingPersonTitle").value.trim();
       log.content = document.getElementById("meetingContent").value;
@@ -1146,6 +1240,7 @@ document.getElementById("endButton").addEventListener("click", async () => {
     date: getToday(),
     number: currentVisit.number,
     target: currentVisit.target,
+    customerCode: currentVisit.customerCode || "",
     startTime: currentVisit.startTime,
     startLocation: currentVisit.startLocation,
     startLat: currentVisit.startLat,
@@ -1343,6 +1438,262 @@ document.getElementById("vehicleResetButton").addEventListener("click", () => {
    ・完了マークを付けるまでずっと表示され続ける
 ========================================================= */
 
+/* =========================================================
+   客先名リスト（営業所キーで暗号化ファイルを取得→端末内で復号）
+   ・営業所キーは端末に保存しない（取得・更新のたびに入力）
+   ・復号した客先名リストだけを端末内に保存し、オフラインでも使える
+   ・画面には客先名だけ表示し、顧客コードは裏で記録してメールに入れる
+========================================================= */
+
+const MASTER_STORE_KEY = "customerMaster";
+let customerMaster = null;
+try{ customerMaster = JSON.parse(localStorage.getItem(MASTER_STORE_KEY) || "null"); }catch(e){ customerMaster = null; }
+
+let selectedCustomer = null; // { code, name }
+let activeKana = null;
+
+const KANA_ROWS = [
+  ["あ","あいうえおぁぃぅぇぉゔ"], ["か","かきくけこがぎぐげご"], ["さ","さしすせそざじずぜぞ"],
+  ["た","たちつてとだぢづでどっ"], ["な","なにぬねの"], ["は","はひふへほばびぶべぼぱぴぷぺぽ"],
+  ["ま","まみむめも"], ["や","やゆよゃゅょ"], ["ら","らりるれろ"], ["わ","わをんゎ"]
+];
+
+function toHiragana(str){
+  return String(str || "").normalize("NFKC").replace(/[\u30A1-\u30F6]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+}
+
+function kanaRowOf(reading){
+  const s = toHiragana(reading).trim();
+  if(!s) return "他";
+  const ch = s[0];
+  for(const [row, chars] of KANA_ROWS){
+    if(chars.includes(ch)) return row;
+  }
+  return "他";
+}
+
+function resolveCustomerCode(name){
+  if(!name) return "";
+  if(selectedCustomer && selectedCustomer.name === name) return selectedCustomer.code || "";
+  if(!customerMaster || !Array.isArray(customerMaster.items)) return "";
+  const hits = customerMaster.items.filter(i => i.n === name);
+  const codes = [...new Set(hits.map(i => i.c))];
+  return codes.length === 1 ? (codes[0] || "") : "";
+}
+
+function renderMasterUI(){
+  const has = !!(customerMaster && Array.isArray(customerMaster.items));
+  document.getElementById("masterStatus").textContent = has
+    ? `客先名リスト：${customerMaster.office || ""} ${customerMaster.items.length.toLocaleString()}件${customerMaster.updated ? "（" + customerMaster.updated + "更新）" : ""}`
+    : "客先名リスト：未取得";
+  document.getElementById("masterFetchButton").textContent = has ? "更新" : "取り込む";
+  document.getElementById("masterClearButton").style.display = has ? "inline-block" : "none";
+  document.getElementById("kanaArea").style.display = has ? "block" : "none";
+  if(has) renderKanaGrid();
+}
+
+function renderKanaGrid(){
+  const grid = document.getElementById("kanaGrid");
+  grid.innerHTML = "";
+  [...KANA_ROWS.map(r => r[0]), "他"].forEach(row => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "kana-btn" + (row === activeKana ? " active" : "");
+    btn.textContent = row;
+    btn.addEventListener("click", () => {
+      activeKana = (activeKana === row) ? null : row;
+      renderKanaGrid();
+      renderCustomerList();
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function renderCustomerList(){
+  const box = document.getElementById("customerList");
+  box.innerHTML = "";
+  if(!activeKana || !customerMaster){ box.style.display = "none"; return; }
+
+  const items = customerMaster.items
+    .filter(i => kanaRowOf(i.k) === activeKana)
+    .sort((a, b) => toHiragana(a.k).localeCompare(toHiragana(b.k), "ja"));
+
+  if(items.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "customer-empty";
+    empty.textContent = "該当する客先はありません";
+    box.appendChild(empty);
+  }else{
+    items.forEach(item => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "customer-item";
+      btn.textContent = item.n;
+      btn.addEventListener("click", () => {
+        document.getElementById("homeVisitTarget").value = item.n;
+        selectedCustomer = { code: item.c || "", name: item.n };
+        box.style.display = "none";
+      });
+      box.appendChild(btn);
+    });
+  }
+  box.style.display = "block";
+  box.scrollTop = 0;
+}
+
+document.getElementById("homeVisitTarget").addEventListener("input", () => {
+  const v = document.getElementById("homeVisitTarget").value.trim();
+  if(selectedCustomer && selectedCustomer.name !== v) selectedCustomer = null;
+});
+
+document.getElementById("masterFetchButton").addEventListener("click", () => {
+  const box = document.getElementById("masterKeyBox");
+  const show = box.style.display === "none";
+  box.style.display = show ? "block" : "none";
+  document.getElementById("masterMessage").textContent = "";
+  if(show) document.getElementById("masterKeyInput").focus();
+});
+
+// 取得・取り込み共通：メッセージ表示と保存
+function setMasterMessage(text, isError){
+  const msg = document.getElementById("masterMessage");
+  msg.style.color = isError ? "var(--pink-ink)" : "var(--ink-soft)";
+  msg.textContent = text;
+}
+
+function setMasterBusy(busy){
+  document.getElementById("masterFileButton").disabled = busy;
+  document.getElementById("masterGoButton").disabled = busy;
+}
+
+function saveMasterData(data){
+  customerMaster = { office: data.office || "", updated: data.updated || "", items: data.items };
+  localStorage.setItem(MASTER_STORE_KEY, JSON.stringify(customerMaster));
+  document.getElementById("masterKeyInput").value = "";
+  setMasterMessage("", false);
+  document.getElementById("masterKeyBox").style.display = "none";
+  activeKana = null;
+  renderMasterUI();
+  renderCustomerList();
+  showToast(`客先名リストを取り込みました（${customerMaster.items.length.toLocaleString()}件）`);
+}
+
+function hasCryptoSupport(){
+  if(window.crypto && window.crypto.subtle) return true;
+  setMasterMessage("この画面では暗号化機能を使えません。https:// で始まるアドレスで開いてください。", true);
+  return false;
+}
+
+// 方法1：受け取ったファイル（OneDrive・メールなど）を選んで取り込む
+document.getElementById("masterFileButton").addEventListener("click", () => {
+  const input = document.getElementById("masterKeyInput");
+  if(!normalizeKey(input.value)){
+    setMasterMessage("先に営業所キーを入力してください。", true);
+    input.focus();
+    return;
+  }
+  document.getElementById("masterFile").click();
+});
+
+document.getElementById("masterFile").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+
+  const input = document.getElementById("masterKeyInput");
+  setMasterBusy(true);
+  setMasterMessage("確認中です…（数秒かかることがあります）", false);
+
+  try{
+    if(!hasCryptoSupport()) return;
+    if(file.size > 20 * 1024 * 1024){
+      setMasterMessage("ファイルが大きすぎます。客先名リストのファイルを選んでください。", true);
+      return;
+    }
+
+    const { aesKey } = await deriveMaster(input.value);
+    let data;
+    try{
+      data = await decryptMaster(aesKey, await file.arrayBuffer());
+    }catch(decErr){
+      setMasterMessage("キーが違うか、選んだファイルが違います。キーとファイルを確認してください。", true);
+      return;
+    }
+    if(!data || !Array.isArray(data.items)){
+      setMasterMessage("リストの形式が正しくありません。", true);
+      return;
+    }
+    saveMasterData(data);
+  }catch(err){
+    setMasterMessage("取り込みに失敗しました。", true);
+  }finally{
+    setMasterBusy(false);
+  }
+});
+
+// 方法2：サーバー（GitHubなど）の master フォルダから自動で取得する
+document.getElementById("masterGoButton").addEventListener("click", async () => {
+  const input = document.getElementById("masterKeyInput");
+  if(!normalizeKey(input.value)){
+    setMasterMessage("先に営業所キーを入力してください。", true);
+    input.focus();
+    return;
+  }
+
+  setMasterBusy(true);
+  setMasterMessage("確認中です…（数秒かかることがあります）", false);
+
+  try{
+    if(!hasCryptoSupport()) return;
+
+    const { aesKey, fileId } = await deriveMaster(input.value);
+
+    let res;
+    try{
+      res = await fetch(`master/${fileId}.enc`, { cache: "no-store" });
+    }catch(netErr){
+      setMasterMessage("通信できませんでした。電波の状況を確認してください。", true);
+      return;
+    }
+
+    if(!res.ok){
+      setMasterMessage(res.status === 404
+        ? "キーが違うか、この営業所のリストが登録されていません。"
+        : `取得できませんでした（エラー ${res.status}）。`, true);
+      return;
+    }
+
+    let data;
+    try{
+      data = await decryptMaster(aesKey, await res.arrayBuffer());
+    }catch(decErr){
+      setMasterMessage("キーが違うか、ファイルが壊れています。キーをもう一度確認してください。", true);
+      return;
+    }
+    if(!data || !Array.isArray(data.items)){
+      setMasterMessage("リストの形式が正しくありません。", true);
+      return;
+    }
+    saveMasterData(data);
+  }catch(err){
+    setMasterMessage("取得に失敗しました。", true);
+  }finally{
+    setMasterBusy(false);
+  }
+});
+
+document.getElementById("masterClearButton").addEventListener("click", () => {
+  if(!window.confirm("このスマホから客先名リストを消します。\n再び使うには、営業所キーでもう一度取得します。\n\n消しますか？")) return;
+  localStorage.removeItem(MASTER_STORE_KEY);
+  customerMaster = null;
+  selectedCustomer = null;
+  activeKana = null;
+  renderMasterUI();
+  renderCustomerList();
+  showToast("客先名リストを消しました");
+});
+
+
 const TODO_KEY = "todoItems";
 let todoItems = JSON.parse(localStorage.getItem(TODO_KEY) || "[]");
 
@@ -1501,6 +1852,7 @@ function buildReportMail(){
   logs.forEach((log, i) => {
     body += `【訪問先 ${log.number || (i + 1)}】\n`;
     body += `訪問先：${log.target || ""}\n`;
+    body += `顧客コード：${log.customerCode || ""}\n`;
     body += `時間：${formatTimeOnly(log.startTime)} ～ ${formatTimeOnly(log.endTime)}\n`;
     body += `面談者：${log.attendee || ""}${log.attendeeTitle || ""}\n`;
     body += `内容：${log.content || ""}\n`;
@@ -1560,6 +1912,7 @@ document.getElementById("deleteKeepTodoButton").addEventListener("click", () => 
 ========================================================= */
 
 updateDate();
+renderMasterUI();
 
 const today = getToday();
 const lastOpen = localStorage.getItem(LAST_OPEN_KEY);
