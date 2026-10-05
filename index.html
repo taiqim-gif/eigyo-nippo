@@ -307,6 +307,8 @@
     text-overflow:ellipsis;
   }
 
+  .day-header{ display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:var(--ink-soft); margin:16px 2px 8px; }
+  .day-header:first-child{ margin-top:0; }
   .content-line{ display:flex; align-items:flex-start; gap:8px; margin-bottom:4px; }
   .content-line input[type=checkbox]{ margin-top:3px; width:16px; height:16px; flex:0 0 auto; }
   .content-line span{ font-size:13.5px; line-height:1.5; }
@@ -439,7 +441,7 @@
 
     <div class="todo-list-target" data-hide-empty="1"></div>
 
-    <h2 class="h2-flex"><span>本日の訪問（<span id="visitCount">0</span>件）</span><span class="h2-note">✓ 　ToDoリストへ追加</span></h2>
+    <h2 class="h2-flex"><span>訪問履歴（<span id="visitCount">0</span>件）</span><span class="h2-note">✓ 　ToDoリストへ追加</span></h2>
     <div id="visitList"></div>
 
   </section>
@@ -883,6 +885,15 @@ function toLocalDateKey(d){
   return `${y}-${m}-${day}`;
 }
 
+// 日付の見出し：10/2（金）・本日
+function formatDayLabel(dateStr, today){
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(dateStr || "");
+  if(!m) return dateStr || "日付なし";
+  const d = new Date(parseInt(m[1],10), parseInt(m[2],10) - 1, parseInt(m[3],10));
+  const week = ["日","月","火","水","木","金","土"][d.getDay()];
+  return `${parseInt(m[2],10)}/${parseInt(m[3],10)}（${week}）` + (dateStr === today ? "・本日" : "");
+}
+
 function buildContentLinesHtml(log){
   const lines = (log.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
   if(lines.length === 0) return "";
@@ -904,9 +915,11 @@ function buildContentLinesHtml(log){
 function renderReportScreen(){
   renderTodoList();
   const today = getToday();
-  const logs = meetingLogs
-    .filter(x => x.date === today)
-    .sort((a,b) => (b.startTime || "").localeCompare(a.startTime || "")); // 新しい順
+  // 全データを削除するまで、毎日のデータを残して表示する（日付の新しい順 → 同じ日は新しい訪問が上）
+  const logs = [...meetingLogs].sort((a,b) =>
+    (b.date || "").localeCompare(a.date || "") || (b.startTime || "").localeCompare(a.startTime || ""));
+  const countByDate = {};
+  logs.forEach(l => { countByDate[l.date] = (countByDate[l.date] || 0) + 1; });
 
   document.getElementById("visitCount").textContent = logs.length;
 
@@ -916,12 +929,21 @@ function renderReportScreen(){
   if(logs.length === 0){
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "本日の訪問記録はまだありません";
+    empty.textContent = "訪問記録はまだありません";
     list.appendChild(empty);
     return;
   }
 
+  let lastDate = null;
   logs.forEach(log => {
+    if(log.date !== lastDate){
+      lastDate = log.date;
+      const head = document.createElement("div");
+      head.className = "day-header";
+      head.innerHTML = `<span>${escapeHtml(formatDayLabel(log.date, today))}</span><span>${countByDate[log.date]}件</span>`;
+      list.appendChild(head);
+    }
+
     const card = document.createElement("div");
     card.className = "visit-card";
 
@@ -1410,7 +1432,6 @@ document.getElementById("vehicleSaveButton").addEventListener("click", async () 
   }else{
     goToReport();
     showToast("帰社を記録しました");
-    sendReportMail(); // メール送信ボタンと同じ動作
   }
 });
 
@@ -1812,59 +1833,93 @@ document.getElementById("todoAddButton").addEventListener("click", () => {
    メール送信
 ========================================================= */
 
+// 車両情報に実際の記録（出発・帰社の時刻、給油量）があるか
+function vehicleHasData(v){
+  return !!(v && ((v.departure && v.departure.time) || (v.return && (v.return.time || v.return.fuel))));
+}
+
+// 日報メールの内容：全データを削除するまでの全期間（古い日から順）。
+// TODOリストは現在の状態なので、今日の分の車両情報の後に1回だけ入れる。
 function buildReportMail(){
   const today = getToday();
-  const logs = meetingLogs
-    .filter(x => x.date === today)
-    .sort((a,b) => (a.startTime || "").localeCompare(b.startTime || ""));
 
-  const vehicle = getTodayVehicle();
+  // 対象の日：訪問記録のある日・車両の記録がある日・今日
+  const dateSet = new Set([today]);
+  meetingLogs.forEach(l => { if(l.date) dateSet.add(l.date); });
+  Object.keys(dailyVehicleInfo).forEach(d => { if(vehicleHasData(dailyVehicleInfo[d])) dateSet.add(d); });
+  const dates = [...dateSet].sort();
 
-  let body = "";
-  body += `営業日報\n`;
-  body += `日付：${today}\n\n`;
-
-  body += `【車両情報】\n`;
-  body += `出発時 走行距離：${vehicle.departure.distance || ""}\n`;
-  body += `出発時刻：${formatTimeOnly(vehicle.departure.time)}\n`;
-  body += `帰社時 走行距離：${vehicle.return.distance || ""}\n`;
-  body += `帰社時刻：${formatTimeOnly(vehicle.return.time)}\n`;
-  body += `給油量：${vehicle.return.fuel || ""}\n\n`;
-
-  // TODOリスト：未対応はすべて、対応済は本日対応したもの
+  // TODOリスト：未対応と対応済（これまでの分すべて）
   const pendingTodos = todoItems
     .filter(t => !t.done)
     .sort((a,b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
-  const doneTodayTodos = todoItems
-    .filter(t => t.done && t.completedAt && toLocalDateKey(new Date(t.completedAt)) === today)
-    .sort((a,b) => (a.completedAt || "").localeCompare(b.completedAt || ""));
+  const doneTodos = todoItems
+    .filter(t => t.done)
+    .sort((a,b) => (a.completedAt || a.createdAt || "").localeCompare(b.completedAt || b.createdAt || ""));
+  const todoSendList = [...pendingTodos, ...doneTodos];
 
-  const todoSendList = [...pendingTodos, ...doneTodayTodos];
-  if(todoSendList.length > 0){
-    body += `【TODOリスト】\n`;
-    todoSendList.forEach((t, i) => {
-      const status = t.done ? formatDoneSuffix(t.completedAt) : "(未対応)";
-      body += `${i + 1}. ${formatMonthDay(t.date)}　${t.target ? t.target + "　" : ""}${t.content || ""}${status}\n`;
-    });
-    body += `\n`;
-  }
+  let body = `営業日報\n\n`;
 
-  logs.forEach((log, i) => {
-    body += `【訪問先 ${log.number || (i + 1)}】\n`;
-    body += `訪問先：${log.target || ""}\n`;
-    body += `顧客コード：${log.customerCode || ""}\n`;
-    body += `時間：${formatTimeOnly(log.startTime)} ～ ${formatTimeOnly(log.endTime)}\n`;
-    body += `面談者：${log.attendee || ""}${log.attendeeTitle || ""}\n`;
-    body += `内容：${log.content || ""}\n`;
-    body += `特記事項：${log.notes || ""}\n\n`;
+  dates.forEach(date => {
+    const vehicle = date === today
+      ? getTodayVehicle()
+      : (dailyVehicleInfo[date] || { departure:{}, return:{} });
+    // 過去の日で出発・帰社の記録がない場合、自動で入った前回の走行距離は載せない
+    const recorded = date === today || vehicleHasData(vehicle);
+    const dep = recorded ? (vehicle.departure || {}) : {};
+    const ret = recorded ? (vehicle.return || {}) : {};
+
+    body += `日付：${date}\n\n`;
+
+    body += `【車両情報】\n`;
+    body += `出発時 走行距離：${dep.distance || ""}\n`;
+    body += `出発時刻：${formatTimeOnly(dep.time)}\n`;
+    body += `帰社時 走行距離：${ret.distance || ""}\n`;
+    body += `帰社時刻：${formatTimeOnly(ret.time)}\n`;
+    body += `給油量：${ret.fuel || ""}\n\n`;
+
+    if(date === today && todoSendList.length > 0){
+      body += `【TODOリスト】\n`;
+      todoSendList.forEach((t, i) => {
+        const status = t.done ? formatDoneSuffix(t.completedAt) : "(未対応)";
+        body += `${i + 1}. ${formatMonthDay(t.date)}　${t.target ? t.target + "　" : ""}${t.content || ""}${status}\n`;
+      });
+      body += `\n`;
+    }
+
+    meetingLogs
+      .filter(x => x.date === date)
+      .sort((a,b) => (a.startTime || "").localeCompare(b.startTime || ""))
+      .forEach((log, i) => {
+        body += `【訪問先 ${log.number || (i + 1)}】\n`;
+        body += `訪問先：${log.target || ""}\n`;
+        body += `顧客コード：${log.customerCode || ""}\n`;
+        body += `時間：${formatTimeOnly(log.startTime)} ～ ${formatTimeOnly(log.endTime)}\n`;
+        body += `面談者：${log.attendee || ""}${log.attendeeTitle || ""}\n`;
+        body += `内容：${log.content || ""}\n`;
+        body += `特記事項：${log.notes || ""}\n\n`;
+      });
   });
 
   return { subject: `営業日報 ${today}`, body };
 }
 
+// mailto: のアドレスが長すぎるとメールアプリが開かないことがあるため、
+// 長すぎる場合は本文をコピーして、貼り付ける形にする（目安：5万文字）
+const MAILTO_LIMIT = 50000;
+
 function sendReportMail(){
   const { subject, body } = buildReportMail();
   const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  if(mailto.length > MAILTO_LIMIT){
+    copyToClipboard(body);
+    const note = "（本文が長いため、コピーしました。ここに貼り付けてください）";
+    showToast("本文が長いためコピーしました。メールに貼り付けてください");
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(note)}`;
+    return;
+  }
+
   window.location.href = mailto;
 }
 
