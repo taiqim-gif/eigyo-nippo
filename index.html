@@ -297,7 +297,17 @@
     padding:10px 12px;
     margin-bottom:8px;
   }
-  .todo-item label{ display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .todo-item{ display:flex; align-items:center; gap:4px; }
+  .todo-item label{ flex:1; min-width:0; display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .todo-handle{
+    flex:0 0 auto; width:38px; height:38px; margin:-6px -6px -6px 0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; line-height:1; color:var(--ink-soft);
+    cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none;
+    -webkit-touch-callout:none;
+  }
+  .todo-item.dragging{ background:#FFF9E6; border-color:var(--butter-dark); box-shadow:0 6px 18px rgba(80,60,30,0.18); position:relative; z-index:5; }
+  .todo-item.dragging .todo-handle{ cursor:grabbing; color:var(--ink); }
   .todo-item input[type=checkbox]{ width:18px; height:18px; flex:0 0 auto; }
   .todo-item .todo-line{
     flex:1; min-width:0;
@@ -1006,6 +1016,7 @@ function renderReportScreen(){
             done: false,
             source: "line",
             sourceId: sourceId,
+            order: nextTodoOrder(),
             createdAt: new Date().toISOString()
           });
           saveTodos();
@@ -1720,7 +1731,101 @@ let todoItems = JSON.parse(localStorage.getItem(TODO_KEY) || "[]");
 
 function saveTodos(){ localStorage.setItem(TODO_KEY, JSON.stringify(todoItems)); }
 
+// 並び順：orderの小さい順（手動で並べ替えた順）。orderがない古いTODOは作成順に番号を付ける
+function nextTodoOrder(){
+  return todoItems.reduce((m, t) => Math.max(m, Number(t.order) || 0), 0) + 1000;
+}
+
+function ensureTodoOrder(){
+  const missing = todoItems
+    .filter(t => !Number.isFinite(Number(t.order)) || t.order === null || t.order === "" || t.order === undefined)
+    .sort((a,b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+  if(missing.length === 0) return;
+  let n = nextTodoOrder();
+  missing.forEach(t => { t.order = n; n += 1000; });
+  saveTodos();
+}
+ensureTodoOrder();
+
+function sortByTodoOrder(a, b){
+  return (Number(a.order) || 0) - (Number(b.order) || 0) || (a.createdAt || "").localeCompare(b.createdAt || "");
+}
+
 function makeId(){ return `${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
+
+/* =========================================================
+   TODOの並べ替え：右端の「≡」を押したままドラッグ
+   （リスト本体を直接ドラッグするとスクロールと区別できないため、ハンドル方式）
+========================================================= */
+
+function attachTodoDrag(handle, container){
+  const item = handle.closest(".todo-item");
+  let dragging = false;
+  let lastY = 0;
+  let timer = null;
+
+  function reposition(y){
+    const siblings = [...container.querySelectorAll(".todo-item")].filter(el => el !== item);
+    let before = null;
+    for(const sib of siblings){
+      const r = sib.getBoundingClientRect();
+      if(y < r.top + r.height / 2){ before = sib; break; }
+    }
+    if(before){
+      if(item.nextElementSibling !== before) container.insertBefore(item, before);
+    }else if(container.lastElementChild !== item){
+      container.appendChild(item);
+    }
+  }
+
+  function onMove(e){
+    if(!dragging) return;
+    lastY = e.clientY;
+    reposition(lastY);
+    e.preventDefault();
+  }
+
+  function finish(){
+    if(!dragging) return;
+    dragging = false;
+    clearInterval(timer);
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", finish);
+    window.removeEventListener("pointercancel", finish);
+    item.classList.remove("dragging");
+
+    // 画面の並び順をそのまま保存する
+    const ids = [...container.querySelectorAll(".todo-item")].map(el => el.getAttribute("data-id"));
+    ids.forEach((id, i) => {
+      const t = todoItems.find(x => x.id === id);
+      if(t) t.order = (i + 1) * 1000;
+    });
+    saveTodos();
+    renderTodoList(); // 他の画面のリストにも反映
+  }
+
+  handle.addEventListener("pointerdown", e => {
+    if(e.button !== undefined && e.button > 0) return;
+    dragging = true;
+    lastY = e.clientY;
+    item.classList.add("dragging");
+    try{ handle.setPointerCapture(e.pointerId); }catch(err){ /* 未対応の環境では無視 */ }
+    window.addEventListener("pointermove", onMove, { passive:false });
+    window.addEventListener("pointerup", finish);
+    window.addEventListener("pointercancel", finish);
+
+    // 画面の端にいるときは自動でスクロールする
+    timer = setInterval(() => {
+      const edge = 70;
+      if(lastY < edge) window.scrollBy(0, -14);
+      else if(lastY > window.innerHeight - edge) window.scrollBy(0, 14);
+      else return;
+      reposition(lastY);
+    }, 30);
+
+    e.preventDefault();
+  });
+}
 
 function formatMonthDay(dateStr){
   const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(dateStr || "");
@@ -1750,7 +1855,7 @@ function copyToClipboard(text){
 function renderTodoList(){
   const active = todoItems
     .filter(t => !t.done)
-    .sort((a,b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+    .sort(sortByTodoOrder);
 
   document.querySelectorAll(".todo-list-target").forEach(container => {
     container.innerHTML = "";
@@ -1777,14 +1882,18 @@ function renderTodoList(){
     active.forEach(item => {
       const div = document.createElement("div");
       div.className = "todo-item";
+      div.setAttribute("data-id", item.id);
       div.innerHTML = `
         <label>
           <input type="checkbox" class="todo-complete" data-id="${item.id}">
           <span class="todo-line">${escapeHtml(formatMonthDay(item.date))}　${item.target ? escapeHtml(item.target) + "　" : ""}${escapeHtml(item.content)}</span>
         </label>
+        <span class="todo-handle" title="ドラッグで並べ替え" aria-label="ドラッグで並べ替え">≡</span>
       `;
       container.appendChild(div);
     });
+
+    container.querySelectorAll(".todo-handle").forEach(handle => attachTodoDrag(handle, container));
 
     container.querySelectorAll(".todo-complete").forEach(cb => {
       cb.addEventListener("change", () => {
@@ -1821,6 +1930,7 @@ document.getElementById("todoAddButton").addEventListener("click", () => {
     done: false,
     source: "manual",
     sourceId: null,
+    order: nextTodoOrder(),
     createdAt: new Date().toISOString()
   });
   saveTodos();
@@ -1852,7 +1962,7 @@ function buildReportMail(){
   // TODOリスト：未対応と対応済（これまでの分すべて）
   const pendingTodos = todoItems
     .filter(t => !t.done)
-    .sort((a,b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+    .sort(sortByTodoOrder);
   const doneTodos = todoItems
     .filter(t => t.done)
     .sort((a,b) => (a.completedAt || a.createdAt || "").localeCompare(b.completedAt || b.createdAt || ""));
