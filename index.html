@@ -2090,5 +2090,134 @@ if(lastOpen !== today){
 }
 
 </script>
+<!-- ============ 停止のお知らせ(2026年11月30日で終了 → BCP-Nippo1 へ切り替え) ============ -->
+<style>
+  .stop-banner{
+    margin:0 0 12px;
+    padding:12px 14px;
+    border-radius:var(--radius);
+    background:#FFE4EC;
+    border:2px solid var(--pink-dark);
+    color:var(--pink-ink);
+    font-size:13px;
+    line-height:1.6;
+  }
+  .stop-banner strong{ display:block; font-size:15px; margin-bottom:4px; }
+  .stop-banner ol{ margin:0 0 8px; padding-left:1.4em; }
+  .stop-open-btn{
+    display:block; width:100%; padding:11px 10px;
+    border:none; border-radius:12px;
+    background:var(--pink-ink); color:#fff;
+    font:inherit; font-size:14px; font-weight:700;
+    text-align:center; text-decoration:none;
+  }
+  .stop-modal{
+    position:fixed; inset:0; z-index:50;
+    background:rgba(60,50,45,.45);
+    display:none; align-items:center; justify-content:center;
+    padding:16px;
+  }
+  .stop-modal.show{ display:flex; }
+  .stop-modal-box{
+    background:#fff; border-radius:var(--radius);
+    width:100%; max-width:420px; max-height:85vh; overflow:auto;
+    padding:18px 16px 14px;
+    color:var(--ink); font-size:14px; line-height:1.65;
+  }
+  .stop-modal-box h3{ margin:0 0 8px; font-size:16px; color:var(--pink-ink); }
+  .stop-modal-box ol{ margin:0 0 12px; padding-left:1.4em; }
+  .stop-modal-box li{ margin-bottom:6px; }
+  .stop-close-btn{
+    display:block; width:100%; margin-top:8px; padding:10px;
+    border:1px solid var(--line); border-radius:12px;
+    background:#fff; color:var(--ink); font:inherit; font-size:14px;
+  }
+  body.app-ended #homeStartButton,
+  body.app-ended #vehicleSaveButton,
+  body.app-ended #todoAddButton{ opacity:.35; }
+</style>
+
+<div class="stop-modal" id="stopModal" role="dialog" aria-modal="true">
+  <div class="stop-modal-box">
+    <h3>送信が済んだら、新しいアプリへ</h3>
+    <ol>
+      <li>送ったメールが、メールアプリの「送信済み」に入っているか確かめてください。</li>
+      <li>下の「新しいアプリを開く」を押します。Safari で開いたら、共有ボタン(□に↑)から「ホーム画面に追加」を押してください。</li>
+      <li>新しいアプリの顧客リストは、今と同じ暗号化ファイルと担当キーで、もう一度取り込んでください。</li>
+      <li>記録は、新しいアプリには移りません。送信が済んでいれば、このアプリはホーム画面から消してかまいません。</li>
+    </ol>
+    <a class="stop-open-btn" id="stopModalOpen" target="_blank" rel="noopener">新しいアプリを開く</a>
+    <button type="button" class="stop-close-btn" id="stopModalClose">閉じる</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var NEW_APP_URL = "https://taiqim-gif.github.io/BCP-Nippo1/";
+  // 12月1日 0時(スマホの時刻)から終了の扱い
+  var END_AT = new Date(2026, 11, 1, 0, 0, 0);
+
+  // 確かめるとき用: アドレスの末尾に ?testDate=2026-12-01 を付けると、その日として表示する
+  function now(){
+    var m = /[?&]testDate=(\d{4})-(\d{2})-(\d{2})/.exec(location.search);
+    if(m) return new Date(+m[1], +m[2] - 1, +m[3], 12, 0, 0);
+    return new Date();
+  }
+  var ended = now() >= END_AT;
+
+  // 告知の帯(全部の画面の上に出す)
+  var banner = document.createElement("div");
+  banner.className = "stop-banner";
+  banner.id = "stopBanner";
+  if(ended){
+    banner.innerHTML =
+      "<strong>このアプリは終了しました(11月30日まで)。</strong>" +
+      "まだ送っていない記録は、ホームの「日報をメール送信」で送ってください。" +
+      "これからは、新しいアプリ「BCP-Nippo1」を使ってください。" +
+      "<div style=\"height:8px\"></div>";
+  }else{
+    banner.innerHTML =
+      "<strong>このアプリは 11月30日(月) で使えなくなります。</strong>" +
+      "<ol><li>ホームの「日報をメール送信」で、記録を送ってください。</li>" +
+      "<li>新しいアプリ「BCP-Nippo1」に切り替えてください。</li></ol>";
+  }
+  var open = document.createElement("a");
+  open.className = "stop-open-btn";
+  open.href = NEW_APP_URL;
+  open.target = "_blank";
+  open.rel = "noopener";
+  open.textContent = "新しいアプリを開く";
+  banner.appendChild(open);
+  var main = document.querySelector("main");
+  if(main) main.insertBefore(banner, main.firstChild);
+
+  // 送信のあとの案内
+  var modal = document.getElementById("stopModal");
+  document.getElementById("stopModalOpen").href = NEW_APP_URL;
+  document.getElementById("stopModalClose").addEventListener("click", function(){
+    modal.classList.remove("show");
+  });
+  document.getElementById("mailButton").addEventListener("click", function(){
+    // メールアプリへ移ったあと、戻ってきたときに見えるように出しておく
+    setTimeout(function(){ modal.classList.add("show"); }, 800);
+  });
+
+  // 12月1日からは、新しい記録を入れられないようにする(送信・削除は残す)
+  if(ended){
+    document.body.classList.add("app-ended");
+    var BLOCK = ["homeStartButton", "vehicleSaveButton", "todoAddButton"];
+    document.addEventListener("click", function(e){
+      var t = e.target && e.target.closest ? e.target.closest("button") : null;
+      if(t && BLOCK.indexOf(t.id) >= 0){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if(typeof showToast === "function") showToast("このアプリは終了しました。新しいアプリを使ってください");
+      }
+    }, true);
+  }
+})();
+</script>
+
 </body>
 </html>
